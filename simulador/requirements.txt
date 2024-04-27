@@ -1,0 +1,10 @@
+numpy
+scikit-learn==1.3.2
+streamlit
+streamlit-option-menu==0.3.6
+yfinance
+matplotlib
+menu
+plotly==5.3.1
+pandas==1.3.3
+pandas-datareader==0.10.0

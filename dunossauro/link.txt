@@ -1,0 +1,6 @@
+python3 -m venv venv
+venv\scripts\activate
+pip list
+python3.exe -m pip install --upgrade pip
+pip list
+venv\Scripts\activate
