@@ -30,8 +30,8 @@ import matplotlib.pyplot as plt
 from plotly import graph_objs as go
 
 # codigo para processar
-df_tickers = pd.read_csv("dados/tickers.csv", sep=";")
-tickers = df_tickers["ticker"].tolist()
+# df_tickers = pd.read_csv("dados/tickers.csv", sep=";")
+# tickers = df_tickers["ticker"].tolist()
 
 # Crie uma lista vazia para armazenar os DataFrames de cotações
 df_list = []
@@ -57,18 +57,13 @@ st.title("Análise de ações")
 with st.expander("Simulador"):
     st.title("Simulador")
 
-    def pegar_dados_acoes():
+    def pegar_dados_acoes(arquivo):
         # path = "\\wsl.localhost\Ubuntu\home\gutao\dev\streamlit_docker\acoes\acoes.csv"
-        path = "dados/acoes.csv"
+        path = "dados/" + arquivo
         return pd.read_csv(path, delimiter=";")
 
-    def pegar_minhas_acoes():
-        # path = "\\wsl.localhost\Ubuntu\home\gutao\dev\streamlit_docker\acoes\acoes.csv"
-        path = "dados/tickers.csv"
-        return pd.read_csv(path, delimiter=";")
-
-    df = pegar_dados_acoes()
-    df_minhas_acoes = pegar_minhas_acoes()
+    df = pegar_dados_acoes("acoes.csv")
+    df_minhas_acoes = pegar_dados_acoes("tickers.csv")
 
     acao = df["snome"]
     nome_acao_escolhida = st.sidebar.selectbox("Escolha uma ação:", acao)
