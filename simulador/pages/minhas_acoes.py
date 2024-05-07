@@ -152,66 +152,6 @@ df_cotacoes["Media_Movel_15"] = df_cotacoes.groupby("Ticker")["Close"].transform
     lambda x: x.rolling(window=15).mean()
 )
 
-# Encontrando a data e o valor da maior média móvel de 15 períodos
-maior_media_movel = df_cotacoes.groupby("Ticker")["Media_Movel_15"].max()
-data_maior_media_movel = (
-    df_cotacoes.loc[
-        df_cotacoes["Media_Movel_15"].isin(maior_media_movel), ["Ticker", "Date"]
-    ]
-    .groupby("Ticker")
-    .first()
-)
-maior_media_movel_valor = maior_media_movel.rename("Maior_Media_Movel_15")
-
-# Encontrando a data e o valor da menor média móvel de 15 períodos
-menor_media_movel = df_cotacoes.groupby("Ticker")["Media_Movel_15"].min()
-data_menor_media_movel = (
-    df_cotacoes.loc[
-        df_cotacoes["Media_Movel_15"].isin(menor_media_movel), ["Ticker", "Date"]
-    ]
-    .groupby("Ticker")
-    .first()
-)
-menor_media_movel_valor = menor_media_movel.rename("Menor_Media_Movel_15")
-
-# Encontrando o maior e menor valor do período
-maior_valor_periodo = df_cotacoes.groupby("Ticker")["Close"].max()
-menor_valor_periodo = df_cotacoes.groupby("Ticker")["Close"].min()
-data_maior_valor_periodo = (
-    df_cotacoes.loc[df_cotacoes["Close"].isin(maior_valor_periodo), ["Ticker", "Date"]]
-    .groupby("Ticker")
-    .first()
-)
-data_menor_valor_periodo = (
-    df_cotacoes.loc[df_cotacoes["Close"].isin(menor_valor_periodo), ["Ticker", "Date"]]
-    .groupby("Ticker")
-    .first()
-)
-
-# Calculando o lucro/prejuízo
-lucro_prejuizo = df_cotacoes.groupby("Ticker").apply(
-    lambda x: x["Close"].iloc[-1] - x["Close"].iloc[0]
-)
-
-# Criando um DataFrame com os resultados
-df_analises = pd.DataFrame(
-    {
-        "Ticker": df_cotacoes["Ticker"].unique(),
-        #   "Quantidade": analises[
-        #       "quantidade"
-        #   ],  # Adicionando a coluna quantidade do df_minhas_acoes
-        "Dt_Maior_MM_15": data_maior_media_movel["Date"].values,
-        "Maior_MM_15": maior_media_movel_valor.values,
-        "Dt_Menor_MM_15": data_menor_media_movel["Date"].values,
-        "Menor_MM_15": menor_media_movel_valor.values,
-        "Maior_Val_Periodo": maior_valor_periodo.values,
-        "Dt_Maior_Val_Periodo": data_maior_valor_periodo["Date"].values,
-        "Menor_Val_Periodo": menor_valor_periodo.values,
-        "Dt_Menor_Val_Periodo": data_menor_valor_periodo["Date"].values,
-        "Lucro_Prejuizo": lucro_prejuizo.values,
-    }
-)
-
 
 # Função para formatar datas
 def formatar_data(data):
@@ -238,7 +178,7 @@ colunas_para_formatar = [
 ]
 
 # Chamada da função para aplicar a formatação
-aplicar_formatacao(df_analises, colunas_para_formatar, formatar_valor)
+# aplicar_formatacao(df_analises, colunas_para_formatar, formatar_valor)
 
 # Lista de colunas que você deseja formatar
 colunas_para_formatar = [
@@ -248,6 +188,97 @@ colunas_para_formatar = [
     "Dt_Menor_Val_Periodo",
 ]
 
-aplicar_formatacao(df_analises, colunas_para_formatar, formatar_data)
+# aplicar_formatacao(df_analises, colunas_para_formatar, formatar_data)
+df_cotacoes
+# for ticker in tickers:
+#    df_tickers.loc[df_tickers["Ticker"] == ticker]
 
-df_analises
+
+# Função para encontrar o valor máximo da coluna 'Adj Close' e a data correspondente para cada ticker
+def encontrar_valor_maximo_com_data(df):
+    max_values = df.groupby("Ticker").apply(lambda x: x.loc[x["Adj Close"].idxmax()])
+    return max_values[["Adj Close", "Date"]]
+
+
+# Títulos e subtítulos para a aplicação
+st.title('Valores Máximos da Coluna "Adj Close" por Ticker')
+st.subheader(
+    'Valores máximos da coluna "Adj Close" e suas datas correspondentes para cada ticker no DataFrame:'
+)
+
+# Chamando a função para encontrar os valores máximos e as datas correspondentes
+valores_maximos_com_data = encontrar_valor_maximo_com_data(df_cotacoes)
+
+# Exibindo os valores máximos e as datas correspondentes
+st.write(valores_maximos_com_data)
+df_maximos = pd.DataFrame(valores_maximos_com_data)
+
+
+# Função para encontrar o valor mínimo da coluna 'Adj Close' e a data correspondente para cada ticker
+def encontrar_valor_minimo_com_data(df):
+    min_values = df.groupby("Ticker").apply(lambda x: x.loc[x["Adj Close"].idxmin()])
+    return min_values[["Adj Close", "Date"]]
+
+
+# Títulos e subtítulos para a aplicação
+st.title('Valores Minimos da Coluna "Adj Close" por Ticker')
+st.subheader(
+    'Valores minimos da coluna "Adj Close" e suas datas correspondentes para cada ticker no DataFrame:'
+)
+
+# Chamando a função para encontrar os valores máximos e as datas correspondentes
+valores_minimos_com_data = encontrar_valor_minimo_com_data(df_cotacoes)
+
+# Exibindo os valores máximos e as datas correspondentes
+st.write(valores_minimos_com_data)
+df_minimos = pd.DataFrame(valores_minimos_com_data)
+
+
+# Calculando a média móvel de 20 dias (MM20) para cada ticker
+df_cotacoes["MM20"] = df_cotacoes.groupby("Ticker")["Adj Close"].transform(
+    lambda x: x.rolling(window=20).mean()
+)
+
+
+# Função para encontrar o valor máximo da MM20 e a data correspondente para cada ticker
+def encontrar_mm20_maximo_com_data(df):
+    max_values = df.groupby("Ticker").apply(lambda x: x.loc[x["MM20"].idxmax()])
+    return max_values[["MM20", "Date"]]
+
+
+# Chamando a função para encontrar os valores máximos da MM20 e as datas correspondentes
+mm20_maximos_com_data = encontrar_mm20_maximo_com_data(df_cotacoes)
+
+# Criando um novo DataFrame com os valores máximos da MM20 e as datas correspondentes
+df_mm20_maximos = pd.DataFrame(mm20_maximos_com_data)
+
+# Títulos e subtítulos para a aplicação
+st.title("Valores Máximos da Média Móvel de 20 dias (MM20) por Ticker")
+st.subheader(
+    "Valores máximos da MM20 e suas datas correspondentes para cada ticker no DataFrame:"
+)
+
+# Exibindo os valores máximos da MM20 e as datas correspondentes
+st.write(df_mm20_maximos)
+
+
+# Função para encontrar o valor minimo da MM20 e a data correspondente para cada ticker
+def encontrar_mm20_minimo_com_data(df):
+    min_values = df.groupby("Ticker").apply(lambda x: x.loc[x["MM20"].idxmin()])
+    return min_values[["MM20", "Date"]]
+
+
+# Chamando a função para encontrar os valores máximos da MM20 e as datas correspondentes
+mm20_minimos_com_data = encontrar_mm20_minimo_com_data(df_cotacoes)
+
+# Criando um novo DataFrame com os valores máximos da MM20 e as datas correspondentes
+df_mm20_minimos = pd.DataFrame(mm20_minimos_com_data)
+
+# Títulos e subtítulos para a aplicação
+st.title("Valores Minimos da Média Móvel de 20 dias (MM20) por Ticker")
+st.subheader(
+    "Valores minimos da MM20 e suas datas correspondentes para cada ticker no DataFrame:"
+)
+
+# Exibindo os valores máximos da MM20 e as datas correspondentes
+st.write(df_mm20_minimos)
