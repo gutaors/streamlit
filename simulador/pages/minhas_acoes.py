@@ -234,51 +234,66 @@ st.write(valores_minimos_com_data)
 df_minimos = pd.DataFrame(valores_minimos_com_data)
 
 
-# Calculando a média móvel de 20 dias (MM20) para cada ticker
-df_cotacoes["MM20"] = df_cotacoes.groupby("Ticker")["Adj Close"].transform(
+# Calculando a média móvel de 20 dias (MM15) para cada ticker
+df_cotacoes["MM15"] = df_cotacoes.groupby("Ticker")["Adj Close"].transform(
     lambda x: x.rolling(window=20).mean()
 )
 
 
-# Função para encontrar o valor máximo da MM20 e a data correspondente para cada ticker
-def encontrar_mm20_maximo_com_data(df):
-    max_values = df.groupby("Ticker").apply(lambda x: x.loc[x["MM20"].idxmax()])
-    return max_values[["MM20", "Date"]]
+# Função para encontrar o valor máximo da MM15 e a data correspondente para cada ticker
+def encontrar_MM15_maximo_com_data(df):
+    max_values = df.groupby("Ticker").apply(lambda x: x.loc[x["MM15"].idxmax()])
+    return max_values[["MM15", "Date"]]
 
 
-# Chamando a função para encontrar os valores máximos da MM20 e as datas correspondentes
-mm20_maximos_com_data = encontrar_mm20_maximo_com_data(df_cotacoes)
+# Chamando a função para encontrar os valores máximos da MM15 e as datas correspondentes
+MM15_maximos_com_data = encontrar_MM15_maximo_com_data(df_cotacoes)
 
-# Criando um novo DataFrame com os valores máximos da MM20 e as datas correspondentes
-df_mm20_maximos = pd.DataFrame(mm20_maximos_com_data)
-
-# Títulos e subtítulos para a aplicação
-st.title("Valores Máximos da Média Móvel de 20 dias (MM20) por Ticker")
-st.subheader(
-    "Valores máximos da MM20 e suas datas correspondentes para cada ticker no DataFrame:"
-)
-
-# Exibindo os valores máximos da MM20 e as datas correspondentes
-st.write(df_mm20_maximos)
-
-
-# Função para encontrar o valor minimo da MM20 e a data correspondente para cada ticker
-def encontrar_mm20_minimo_com_data(df):
-    min_values = df.groupby("Ticker").apply(lambda x: x.loc[x["MM20"].idxmin()])
-    return min_values[["MM20", "Date"]]
-
-
-# Chamando a função para encontrar os valores máximos da MM20 e as datas correspondentes
-mm20_minimos_com_data = encontrar_mm20_minimo_com_data(df_cotacoes)
-
-# Criando um novo DataFrame com os valores máximos da MM20 e as datas correspondentes
-df_mm20_minimos = pd.DataFrame(mm20_minimos_com_data)
+# Criando um novo DataFrame com os valores máximos da MM15 e as datas correspondentes
+df_MM15_maximos = pd.DataFrame(MM15_maximos_com_data)
 
 # Títulos e subtítulos para a aplicação
-st.title("Valores Minimos da Média Móvel de 20 dias (MM20) por Ticker")
+st.title("Valores Máximos da Média Móvel de 20 dias (MM15) por Ticker")
 st.subheader(
-    "Valores minimos da MM20 e suas datas correspondentes para cada ticker no DataFrame:"
+    "Valores máximos da MM15 e suas datas correspondentes para cada ticker no DataFrame:"
 )
 
-# Exibindo os valores máximos da MM20 e as datas correspondentes
-st.write(df_mm20_minimos)
+# Exibindo os valores máximos da MM15 e as datas correspondentes
+st.write(df_MM15_maximos)
+
+
+# Função para encontrar o valor minimo da MM15 e a data correspondente para cada ticker
+def encontrar_MM15_minimo_com_data(df):
+    min_values = df.groupby("Ticker").apply(lambda x: x.loc[x["MM15"].idxmin()])
+    return min_values[["MM15", "Date"]]
+
+
+# Chamando a função para encontrar os valores máximos da MM15 e as datas correspondentes
+MM15_minimos_com_data = encontrar_MM15_minimo_com_data(df_cotacoes)
+
+# Criando um novo DataFrame com os valores máximos da MM15 e as datas correspondentes
+df_MM15_minimos = pd.DataFrame(MM15_minimos_com_data)
+
+# Títulos e subtítulos para a aplicação
+st.title("Valores Minimos da Média Móvel de 20 dias (MM15) por Ticker")
+st.subheader(
+    "Valores minimos da MM15 e suas datas correspondentes para cada ticker no DataFrame:"
+)
+
+# Exibindo os valores máximos da MM15 e as datas correspondentes
+st.write(df_MM15_minimos)
+
+
+##JUNTANDO TUDO
+
+# Juntando os DataFrames usando a coluna 'Ticker' como chave de junção
+df_analises = pd.merge(
+    df_tickers, df_maximos, left_index=True, right_index=True, how="inner"
+)
+
+# Títulos e subtítulos para a aplicação
+st.title("Junção de DataFrames")
+# st.subheader("DataFrame resultante da junção de df_tickers e df_maximos:")
+
+# Exibindo o DataFrame resultante
+st.write(df_analises)
