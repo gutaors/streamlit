@@ -30,7 +30,7 @@ import matplotlib.pyplot as plt
 from plotly import graph_objs as go
 
 # codigo para processar
-df_tickers = pd.read_csv("tickers.csv", sep=";")
+df_tickers = pd.read_csv("dados/tickers.csv", sep=";")
 tickers = df_tickers["ticker"].tolist()
 
 # Crie uma lista vazia para armazenar os DataFrames de cotações
@@ -58,13 +58,13 @@ with st.expander("Simulador"):
     st.title("Simulador")
 
     def pegar_dados_acoes():
-        # path = "\\wsl.localhost\Ubuntu\home\gutao\dev\streamlit_docker\acoes\acoes.csv"
-        path = "./acoes.csv"
+
+        path = "dados/acoes.csv"
         return pd.read_csv(path, delimiter=";")
 
     def pegar_minhas_acoes():
-        # path = "\\wsl.localhost\Ubuntu\home\gutao\dev\streamlit_docker\acoes\acoes.csv"
-        path = "./tickers.csv"
+
+        path = "dados/tickers.csv"
         return pd.read_csv(path, delimiter=";")
 
     df = pegar_dados_acoes()
