@@ -241,8 +241,17 @@ df_cotacoes["MM15"] = df_cotacoes.groupby("Ticker")["Adj Close"].transform(
 
 
 # Função para encontrar o valor máximo da MM15 e a data correspondente para cada ticker
+#def encontrar_MM15_maximo_com_data(df):
+   # max_values = df.groupby("Ticker").apply(lambda x: x.loc[x["MM15"].dropna().idxmax()] if x["MM15"].dropna().any() #else None)
 def encontrar_MM15_maximo_com_data(df):
-    max_values = df.groupby("Ticker").apply(lambda x: x.loc[x["MM15"].idxmax()])
+    print("DataFrame original:\n", df)
+    max_values = df.groupby("Ticker").apply(lambda x: x.loc[x["MM15"].dropna().idxmax()] if x["MM15"].dropna().any() else None)
+    print("Máximos encontrados:\n", max_values)
+    return max_values
+
+
+
+    #max_values = df.groupby("Ticker").apply(lambda x: x.loc[x["MM15"].idxmax()])
     return max_values[["MM15", "Date"]]
 
 
@@ -264,8 +273,11 @@ st.write(df_MM15_maximos)
 
 # Função para encontrar o valor minimo da MM15 e a data correspondente para cada ticker
 def encontrar_MM15_minimo_com_data(df):
-    min_values = df.groupby("Ticker").apply(lambda x: x.loc[x["MM15"].idxmin()])
-    return min_values[["MM15", "Date"]]
+    print("DataFrame original:\n", df)
+    min_values = df.groupby("Ticker").apply(lambda x: x.loc[x["MM15"].dropna().idxmin()] if not x["MM15"].dropna().empty else pd.Series())
+    print("Mínimos encontrados:\n", min_values)
+    return min_values
+
 
 
 # Chamando a função para encontrar os valores máximos da MM15 e as datas correspondentes

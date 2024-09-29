@@ -161,7 +161,7 @@ with st.expander("Simulador"):
         # quantidade_comprada = valor_sim / close_compra
         valor_vendido = quantidade_comprada * close_venda
         st.write(f"Lucro/Prejuízo: {valor_vendido-valor_sim:.2f}")
-        st.write(f"Preço ação na data da compra {valor_sim:.2f}")
+        st.write(f"Preço ação na data da compra {close_compra:.2f}")
         st.write(f"Preço ação na data da venda {close_venda:.2f}")
         ############## FORMATADO
         # Formate a data de compra

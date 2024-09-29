@@ -37,9 +37,6 @@ tickers = df_tickers["ticker"].tolist()
 df_list = []
 
 
-# Criando a sidebar
-# st.sidebar.markdown("[Clique aqui para abrir o Simulador](./simulador.py)")
-
 
 st.sidebar.header("Escolha a ação")
 
@@ -109,8 +106,11 @@ with st.expander("Simulador"):
     # =================================================================================================
 
     @st.cache_data
+    # Função para pegar valores online
     def pegar_valores_online(sigla_acao):
+        # Faz o download dos dados da ação
         df = yf.download(sigla_acao, DATA_INICIO, DATA_FIM)
+        # Reseta o índice do DataFrame para organizar os dados
         df.reset_index(inplace=True)
         return df
 
@@ -166,7 +166,7 @@ with st.expander("Simulador"):
         # quantidade_comprada = valor_sim / close_compra
         valor_vendido = quantidade_comprada * close_venda
         st.write(f"Lucro/Prejuízo: {valor_vendido-valor_sim:.2f}")
-        st.write(f"Preço ação na data da compra {valor_sim:.2f}")
+        st.write(f"Preço ação na data da compra {close_compra:.2f}")
         st.write(f"Preço ação na data da venda {close_venda:.2f}")
         ############## FORMATADO
         # Formate a data de compra
@@ -301,28 +301,7 @@ with st.expander("Simulador"):
     # renomear colunas
     df_treino = df_treino.rename(columns={"Date": "ds", "Close": "y"})
 
-    # modelo = Prophet()
-    # modelo.fit(df_treino)
 
-    # futuro = modelo.make_future_dataframe(periods=n_dias, freq='B')
-    # previsao = modelo.predict(futuro)
-
-    # st.subheader('Previsão')
-    # st.write(previsao[['ds', 'yhat','yhat_lower','yhat_upper' ]].tail(n_dias))
-
-    # grafico
-    # grafico1 = plot_plotly(modelo, previsao)
-    # st.plotly_chart(grafico1)
-
-    # grafico2
-    # grafico2 = plot_components_plotly(modelo, previsao)
-    # st.plotly_chart(grafico2)
-
-    # df_minhas_acoes["ticker"] = df_minhas_acoes["ticker"].str.replace(".SA", "")
-    # df_minhas_acoes["ticker"] = [
-    #    ticker[:-3] if ticker.endswith(".sa") else ticker
-    #    for ticker in df_minhas_acoes["ticker"]
-    # ]
 
     ticker_selecionado = df_acao.iloc[0]["sigla_acao"]
     if ticker_selecionado in df_minhas_acoes["ticker"].values:
