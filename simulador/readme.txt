@@ -7,8 +7,6 @@ pip install -r requirements.txt
 pip install streamlit
 streamlit run app.py
 http://127.0.0.1:8501/
-ou
-http://localhost:8501
 deactivate
 
 DOCKER

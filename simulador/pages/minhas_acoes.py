@@ -82,22 +82,6 @@ df_cotacoes = pegar_dados_acoes("cotacoes.csv", ",")
 
 # Baixar cotações para cada ticker na lista
 
-# for ticker in tickers:
-#    data = yf.download(ticker, start=start_date, end=end_date)
-#    quotes[ticker] = data
-
-# Concatenar os DataFrames em um DataFrame único
-# df_cotacoes = pd.concat(quotes.values(), keys=quotes.keys(), names=['Ticker', 'Date'])
-
-# Resetar o índice
-# df_cotacoes.reset_index(inplace=True)
-
-# Salvar em um arquivo CSV
-# df_cotacoes.to_csv('dados/cotacoes.csv', index=False)
-
-# Verificar o DataFrame
-# print(df_cotacoes.tail())
-
 
 # Converter a coluna 'Date' para o formato de data
 df_cotacoes["Date"] = pd.to_datetime(df_cotacoes["Date"])
@@ -241,17 +225,8 @@ df_cotacoes["MM15"] = df_cotacoes.groupby("Ticker")["Adj Close"].transform(
 
 
 # Função para encontrar o valor máximo da MM15 e a data correspondente para cada ticker
-#def encontrar_MM15_maximo_com_data(df):
-   # max_values = df.groupby("Ticker").apply(lambda x: x.loc[x["MM15"].dropna().idxmax()] if x["MM15"].dropna().any() #else None)
 def encontrar_MM15_maximo_com_data(df):
-    print("DataFrame original:\n", df)
-    max_values = df.groupby("Ticker").apply(lambda x: x.loc[x["MM15"].dropna().idxmax()] if x["MM15"].dropna().any() else None)
-    print("Máximos encontrados:\n", max_values)
-    return max_values
-
-
-
-    #max_values = df.groupby("Ticker").apply(lambda x: x.loc[x["MM15"].idxmax()])
+    max_values = df.groupby("Ticker").apply(lambda x: x.loc[x["MM15"].idxmax()])
     return max_values[["MM15", "Date"]]
 
 
@@ -273,11 +248,8 @@ st.write(df_MM15_maximos)
 
 # Função para encontrar o valor minimo da MM15 e a data correspondente para cada ticker
 def encontrar_MM15_minimo_com_data(df):
-    print("DataFrame original:\n", df)
-    min_values = df.groupby("Ticker").apply(lambda x: x.loc[x["MM15"].dropna().idxmin()] if not x["MM15"].dropna().empty else pd.Series())
-    print("Mínimos encontrados:\n", min_values)
-    return min_values
-
+    min_values = df.groupby("Ticker").apply(lambda x: x.loc[x["MM15"].idxmin()])
+    return min_values[["MM15", "Date"]]
 
 
 # Chamando a função para encontrar os valores máximos da MM15 e as datas correspondentes
