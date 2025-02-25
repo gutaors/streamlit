@@ -47,7 +47,7 @@ def verificar_ticker_real(ticker: str) -> bool:
 def baixar_cotacoes(ticker: str) -> pd.DataFrame:
     """
     Baixa um DataFrame de cotações para o ticker fornecido,
-    com dados entre 01/01/2018 e o dia atual.
+    com dados entre 01/01/2009 e o dia atual.
 
     Parâmetros:
         ticker (str): O código do ativo para buscar as cotações.
@@ -56,7 +56,7 @@ def baixar_cotacoes(ticker: str) -> pd.DataFrame:
         pd.DataFrame: Um DataFrame contendo as cotações do ativo.
     """
     # Definir a data inicial e final
-    data_inicio = "2018-01-01"
+    data_inicio = "2009-01-01"
     data_fim = datetime.today().strftime('%Y-%m-%d')
 
     # Baixar os dados
