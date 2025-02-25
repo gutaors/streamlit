@@ -14,596 +14,147 @@
 
 import streamlit as st
 from streamlit_option_menu import option_menu
-import yfinance as yf
 from datetime import date, datetime, timedelta
 import pandas as pd
 import plotly.graph_objs as go
 import os
 
-# importei depois
-from datetime import datetime, timedelta
-import pandas_datareader.data as web
-import matplotlib.pyplot as plt
-
-# from fbprophet import Prophet
-# from fbprophet.plot import plot_plotly, plot_components_plotly
-from plotly import graph_objs as go
-
-# codigo para processar
-# df_tickers = pd.read_csv("dados/tickers.csv", sep=";")
-# tickers = df_tickers["ticker"].tolist()
-
-# Crie uma lista vazia para armazenar os DataFrames de cotações
-df_list = []
-
-
-# Criando a sidebar
-# st.sidebar.markdown("[Clique aqui para abrir o Simulador](./simulador.py)")
-
-
-st.sidebar.header("Escolha a ação")
-
-n_dias = st.slider("Quantidade de dias de previsão", 30, 365)
-
-# Criando a sidebar DATAS
-st.sidebar.header("Filtros")
-
-
-# codigo do dashboard
-DATA_INICIO = "2015-01-05"
-DATA_FIM = date.today().strftime("%Y-%m-%d")
-st.title("Análise de ações")
-
-with st.expander("Simulador"):
-    st.title("Simulador")
-
-    def pegar_dados_acoes(arquivo):
-        # path = "\\wsl.localhost\Ubuntu\home\gutao\dev\streamlit_docker\acoes\acoes.csv"
-        path = "dados/" + arquivo
-        return pd.read_csv(path, delimiter=";")
-
-    df = pegar_dados_acoes("acoes.csv")
-    df_minhas_acoes = pegar_dados_acoes("tickers.csv")
-
-    acao = df["snome"]
-    nome_acao_escolhida = st.sidebar.selectbox("Escolha uma ação:", acao)
-
-    df_acao = df[df["snome"] == nome_acao_escolhida]
-    acao_escolhida = df_acao.iloc[0]["sigla_acao"]
-    acao_escolhida = acao_escolhida + ".SA"
-
-    ticker_selecionado = df_acao.iloc[0]["sigla_acao"] + ".SA"
-    acao_registro = df_minhas_acoes[df_minhas_acoes["ticker"] == ticker_selecionado]
-
-    # Verificar se há dados no DataFrame acao_registro
-    # if not acao_registro.empty:
-    #    data_registro = acao_registro.iloc[0]["data"]
-    #    data_compra_sim = data_registro
-    #    # Atualizar o valor do campo data_compra_sim na sidebar
-    #    st.sidebar.date_input(
-    #        "Data de Compra (Simulação)", value=pd.to_datetime(data_compra_sim)
-    #    )
-    # else:
-    data_compra_sim = st.sidebar.date_input("Data de Compra (Simulação)")
-
-    data_venda_sim = st.sidebar.date_input("Data de Venda (Simulação)")
-
-    # =================================================================================================
-    # Verificar se há dados no DataFrame acao_registro
-    # if not acao_registro.empty:
-    #    valor_registro = acao_registro.iloc[0]["investi"]
-    #    valor_registro = valor_registro.replace(",", ".")
-    #    valor_registro = float(valor_registro)
-
-    #    qtde_sim = acao_registro.iloc[0]["quantidade"]
-    #    qtde_sim = float(qtde_sim)
-    #    # Atualizar o valor do campo data_compra_sim na sidebar
-    #    valor_sim = st.sidebar.number_input("Valor:", value=valor_registro, step=0.01)
-    # else:
-    valor_sim = st.sidebar.number_input("Valor:", value=1000.00, step=0.01)
-    # =================================================================================================
-
-    @st.cache_data
-    def pegar_valores_online(sigla_acao):
-        df = yf.download(sigla_acao, DATA_INICIO, DATA_FIM)
-        df.reset_index(inplace=True)
-        return df
-
-    df_valores = pegar_valores_online(acao_escolhida)
-    #############
-    st.subheader("Simulação - " + nome_acao_escolhida)
-    st.write(
-        "**Data da compra:**",
-        data_compra_sim.strftime("%d/%m/%Y"),
-        "  **Data da venda:**",
-        data_venda_sim.strftime("%d/%m/%Y"),
-    )
-    st.write("**Valor:** ", f"R$ {valor_sim:.2f}")
-
-    # Simular a compra
-    # Filtrar o DataFrame com base na data de compra
-    filtro_data = df_valores["Date"] == pd.to_datetime(data_compra_sim)
-    dados_compra = df_valores[filtro_data]
-    # caso data de compra não tenha dados retrocede um dia até ter
-    while dados_compra.empty:
-        data_compra_sim = data_compra_sim - timedelta(days=1)
-        filtro_data = df_valores["Date"] == pd.to_datetime(data_compra_sim)
-        dados_compra = df_valores[filtro_data]
-    # Obter o valor do Adj Close na data de compra
-    if not dados_compra.empty:
-        close_compra = dados_compra.iloc[0]["Adj Close"]
-        # Calcular quantos papéis foram comprados com o valor disponível
-        quantidade_comprada = valor_sim / close_compra
-        st.write(
-            f"Quantidade de papéis comprados com {valor_sim:.2f}: {quantidade_comprada:.2f}"
-        )
-    else:
-        st.write(
-            f"**Não há dados para a data de compra especificada:** {data_compra_sim.strftime('%d/%m/%Y')}"
-        )
-
-    #############+=============================================================================================
-    # Simular a Venda
-    # Filtrar o DataFrame com base na data de venda
-    filtro_data = df_valores["Date"] == pd.to_datetime(data_venda_sim)
-    dados_venda = df_valores[filtro_data]
-    # caso data de compra não tenha dados retrocede um dia até ter
-    while dados_venda.empty:
-        data_venda_sim = data_venda_sim - timedelta(days=1)
-        filtro_data = df_valores["Date"] == pd.to_datetime(data_venda_sim)
-        dados_venda = df_valores[filtro_data]
-
-    # Obter o valor do Adj Close na data de venda
-    if not dados_venda.empty:
-        close_venda = dados_venda.iloc[0]["Adj Close"]
-        # Calcular quantos papéis foram comprados com o valor disponível
-        ###print(close_compra)
-        # quantidade_comprada = valor_sim / close_compra
-        valor_vendido = quantidade_comprada * close_venda
-        st.write(f"Lucro/Prejuízo: {valor_vendido-valor_sim:.2f}")
-        st.write(f"Preço ação na data da compra {close_compra:.2f}")
-        st.write(f"Preço ação na data da venda {close_venda:.2f}")
-        ############## FORMATADO
-        # Formate a data de compra
-        data_compra_formatada = data_compra_sim.strftime("%d/%m/%Y")
-        data_venda_formatada = data_venda_sim.strftime("%d/%m/%Y")
-        # Formate o valor_sim como moeda
-        valor_formatado = f"R$ {valor_vendido-valor_sim:.2f}"  # Exemplo formatado em reais brasileiros
-
-        # Defina a cor do botão com base no valor
-        if valor_vendido - valor_sim >= 0:
-            cor_botao = "background-color: green; color: white"
-        else:
-            cor_botao = "background-color: red; color: white"
-
-        # Exiba os valores dentro de botões coloridos
-        st.markdown(
-            "<div style='display: flex; justify-content: space-between;'>"
-            f"<div style='{cor_botao}; padding: 10px; border-radius: 5px;'>Data da Compra: {data_compra_formatada}</div>"
-            f"<div style='{cor_botao}; padding: 10px; border-radius: 5px;'>Data da Venda: {data_venda_formatada}</div>"
-            f"<div style='{cor_botao}; padding: 10px; border-radius: 5px;'>Lucro/Prejuízo: {valor_vendido-valor_sim:.2f}</div>"
-            "</div>",
-            unsafe_allow_html=True,
-        )
-
-        ############## FORMATADO
-    else:
-        f"**Não há dados para a data de venda especificada:** {data_venda_sim.strftime('%d/%m/%Y')}"
-
-    st.write(df_valores.tail(3))
-
-    # ================================================================================================================================================
-
-    # Filtra as linhas correspondentes às datas de compra e venda
-    row_compra = df_valores[df_valores["Date"].dt.date == data_compra_sim]
-    row_venda = df_valores[df_valores["Date"].dt.date == data_venda_sim]
-
-    ##############
-    st.subheader("Tabela de valores - " + nome_acao_escolhida)
-    st.write(df_valores.tail(10))
-    st.write(df_valores.tail(10))
-
-    # Criar gráfico de médias móveis
-
-    # Calcular médias móveis de 15 e 50 períodos
-    df_valores["MA15"] = df_valores["Close"].rolling(window=15).mean()
-    df_valores["MA50"] = df_valores["Close"].rolling(window=50).mean()
-
-    # Criar coluna para identificar cruzamentos
-    df_valores["Cruzamento"] = df_valores["MA15"] - df_valores["MA50"]
-
-    # Plotar gráfico com preços, médias móveis e setas para cruzamentos
-    st.subheader("Gráfico de Médias Móveis com Cruzamentos")
-    fig_ma_cruzamentos = go.Figure()
-
-    fig_ma_cruzamentos.add_trace(
-        go.Scatter(
-            x=df_valores["Date"],
-            y=df_valores["Close"],
-            name="Preço de Fechamento",
-            line_color="blue",
-        )
-    )
-    fig_ma_cruzamentos.add_trace(
-        go.Scatter(
-            x=df_valores["Date"],
-            y=df_valores["MA15"],
-            name="Média Móvel de 15 períodos",
-            line_color="orange",
-        )
-    )
-    fig_ma_cruzamentos.add_trace(
-        go.Scatter(
-            x=df_valores["Date"],
-            y=df_valores["MA50"],
-            name="Média Móvel de 50 períodos",
-            line_color="green",
-        )
-    )
-
-    # Adicionar setas para cruzamentos
-    for index, row in df_valores.iterrows():
-        if (
-            index > 0
-            and df_valores.at[index, "Cruzamento"]
-            * df_valores.at[index - 1, "Cruzamento"]
-            < 0
-        ):
-            arrow_color = "green" if df_valores.at[index, "Cruzamento"] > 0 else "red"
-            fig_ma_cruzamentos.add_annotation(
-                x=row["Date"],
-                y=row["Close"],
-                ax=row["Date"],
-                ay=row["Close"],
-                showarrow=True,
-                arrowhead=1,
-                arrowsize=2,
-                arrowwidth=2,
-                arrowcolor=arrow_color,
-            )
-
-    fig_ma_cruzamentos.update_layout(
-        title="Gráfico de Preços e Médias Móveis com Cruzamentos"
-    )
-    st.plotly_chart(fig_ma_cruzamentos)
-
-    # Criar gráfico de preços
-
-    st.subheader("Gráfico de preços:")
-    fig = go.Figure()
-    fig.add_trace(
-        go.Scatter(
-            x=df_valores["Date"],
-            y=df_valores["Close"],
-            name="Preco Fechamento",
-            line_color="yellow",
-        )
-    )
-    fig.add_trace(
-        go.Scatter(
-            x=df_valores["Date"],
-            y=df_valores["Open"],
-            name="Preco Abertura",
-            line_color="blue",
-        )
-    )
-    st.plotly_chart(fig)
-
-    # previsao
-
-    df_treino = df_valores[["Date", "Close"]]
-
-    # renomear colunas
-    df_treino = df_treino.rename(columns={"Date": "ds", "Close": "y"})
-
-    # modelo = Prophet()
-    # modelo.fit(df_treino)
-
-    # futuro = modelo.make_future_dataframe(periods=n_dias, freq='B')
-    # previsao = modelo.predict(futuro)
-
-    # st.subheader('Previsão')
-    # st.write(previsao[['ds', 'yhat','yhat_lower','yhat_upper' ]].tail(n_dias))
-
-    # grafico
-    # grafico1 = plot_plotly(modelo, previsao)
-    # st.plotly_chart(grafico1)
-
-    # grafico2
-    # grafico2 = plot_components_plotly(modelo, previsao)
-    # st.plotly_chart(grafico2)
-
-    # df_minhas_acoes["ticker"] = df_minhas_acoes["ticker"].str.replace(".SA", "")
-    # df_minhas_acoes["ticker"] = [
-    #    ticker[:-3] if ticker.endswith(".sa") else ticker
-    #    for ticker in df_minhas_acoes["ticker"]
-    # ]
-
-    ticker_selecionado = df_acao.iloc[0]["sigla_acao"]
-    if ticker_selecionado in df_minhas_acoes["ticker"].values:
-        valor_pago = df_minhas_acoes[df_minhas_acoes["ticker"] == ticker_selecionado][
-            "paguei"
-        ].values[0]
-        valor_maximo = df_valores["Close"].max()
-        diferenca_valor_maximo = valor_maximo - float(valor_pago.replace(",", "."))
-        valor_pago = float(valor_pago.replace(",", "."))
-        st.subheader("Análise da Ação: " + nome_acao_escolhida)
-        st.write("Ticker selecionado: " + ticker_selecionado)
-        st.write("Valor Pago: R$ {:.2f}".format(valor_pago))
-        st.write("Valor Máximo: R$ {:.2f}".format(valor_maximo))
-        st.write(
-            "Diferença entre Valor Máximo e Valor Pago: R$ {:.2f}".format(
-                diferenca_valor_maximo
-            )
-        )
-
-    st.subheader("Valores em df_acao['sigla_acao']")
-    st.write(df_acao["sigla_acao"])
-
-    st.subheader("Valores em df_minhas_acoes['ticker']")
-    st.write(df_minhas_acoes["ticker"])
-
-    # Filtra os dados entre as datas da coluna 'data' em df_minhas_acoes e a data atual
-
-    data_inicio = datetime.now() - timedelta(
-        days=30 * 12
-    )  # Subtrai 12 meses (aproximadamente 30 dias por mês)
-
-    data_atual = datetime.today().strftime("%Y%m%d")
-    data_fim = data_atual
-    mask = (df_valores["Date"] >= data_inicio) & (df_valores["Date"] <= data_fim)
-    df_valores_filtrado = df_valores.loc[mask]
-
-    # Agrupa por mês/ano e calcula a média de 'Adj Close'
-    df_valores_filtrado["YearMonth"] = df_valores_filtrado["Date"].dt.to_period("M")
-    media_por_mes = df_valores_filtrado.groupby("YearMonth")["Adj Close"].mean()
-
-    # Seleciona os três meses com maiores médias
-    tres_meses_mais_altos = media_por_mes.nlargest(3)
-
-    st.subheader("Três meses com maiores médias de Adj Close:")
-    st.subheader("no último ano")
-
-    for year_month, media in tres_meses_mais_altos.items():
-        st.write(f"Mês/Ano: {year_month}, Média: {media:.2f}")
-
-    # Seleciona os três meses com menores médias
-    tres_meses_menos_altos = media_por_mes.nsmallest(3)
-
-    st.subheader("Três meses com menores médias de Adj Close:")
-    st.subheader("no último ano")
-    for year_month, media in tres_meses_menos_altos.items():
-        st.write(f"Mês/Ano: {year_month}, Média: {media:.2f}")
-
-
-with st.expander("Painel Resumido"):
-    st.title("Painel Resumido")
-    # Pega a ação selecionada e mostra o maior valor nos últimos cinco anos
-    # ticker_selecionado = df_acao.iloc[0]["sigla_acao"]
-    # ticker_selecionado = ticker_selecionado + ".SA"
-    # st.write(df.head(10))
-    # st.write(df_minhas_acoes.head(10))
-    # st.write(df_valores.head(10))
-    # st.write(df_valores_filtrado.head(10))
-
-    # ENCONTRAR DATA EXATA DE CINCO ANOS ATRÁS
-
-    # Subtraia cinco anos
-    data_cinco_anos_atras = pd.to_datetime(data_atual) - timedelta(days=5 * 365)
-    # Métricas entre data_atual e data_cinco_anos_atras
-    data_cinco_anos_atras = pd.to_datetime(data_cinco_anos_atras)
-    data_atual = pd.to_datetime(data_atual)
-
-    # Filtrar as linhas no período desejado
-    df_periodo = df_valores.loc[
-        (df_valores["Date"] >= data_cinco_anos_atras)
-        & (df_valores["Date"] <= data_atual)
-    ]
-
-    # Calcular as métricas
-    valor_maximo = df_periodo["Close"].max()
-    valor_minimo = df_periodo["Close"].min()
-    valor_medio = df_periodo["Close"].mean()
-    variancia = df_periodo["Close"].var()
-    valor_inicio_periodo = df_periodo["Close"].iloc[0]
-    valor_final_periodo = df_periodo["Close"].iloc[-1]
-    date_inicio_periodo = df_periodo["Date"].iloc[0]
-    date_final_periodo = df_periodo["Date"].iloc[-1]
-
-    # Exibir os resultados
-
-    st.write(
-        f"Valor <span style='color:red; font-weight:bold;'>Máximo</span> de Close no Período: <span style='font-weight:bold;'>R$ {valor_maximo:.2f}</span>",
-        unsafe_allow_html=True,
-    )
-    st.write(
-        f"Valor <span style='color:red; font-weight:bold;'>Mínimo</span> de Close no Período: <span style='font-weight:bold;'>R$ {valor_minimo:.2f}</span>",
-        unsafe_allow_html=True,
-    )
-    st.write(
-        f"Valor <span style='color:red; font-weight:bold;'>Médio</span> de Close no Período: <span style='font-weight:bold;'>R$ {valor_medio:.2f}</span>",
-        unsafe_allow_html=True,
-    )
-    st.write(
-        f"<span style='color:red; font-weight:bold;'>Variância</span> do Valor Close no Período: <span style='font-weight:bold;'>R$ {variancia:.2f}</span>",
-        unsafe_allow_html=True,
-    )
-    st.write(
-        f"Valor de <span style='color:red; font-weight:bold;'>cinco anos</span> atrás: <span style='font-weight:bold;'>R$ {valor_inicio_periodo:.2f}</span>",
-        unsafe_allow_html=True,
-    )
-    st.write(
-        f"Valor <span style='color:red; font-weight:bold;'>atual</span>: <span style='font-weight:bold;'>R$ {valor_final_periodo:.2f}</span>",
-        unsafe_allow_html=True,
-    )
-    st.write(
-        "Data de  <span style='color:red; font-weight:bold;'>cinco anos</span> atrás:<span style='font-weight:bold;'>",
-        date_inicio_periodo.strftime("%d/%m/%Y"),
-        "</span>",
-        unsafe_allow_html=True,
-    )
-    st.write(
-        f"Data  <span style='color:red; font-weight:bold;'>atual</span>:<span style='font-weight:bold;'>",
-        date_final_periodo.strftime("%d/%m/%Y"),
-        "</span>",
-        unsafe_allow_html=True,
-    )
-
-    # Box com valor que está mais próximo do atual, médio, máx ou mínimo
-    # Calcula a diferença entre o valor_final_periodo e cada um dos outros valores
-    dif_minimo = abs(valor_final_periodo - valor_minimo)
-    dif_maximo = abs(valor_final_periodo - valor_maximo)
-    dif_medio = abs(valor_final_periodo - valor_medio)
-
-    # Encontra o valor mais próximo
-    valor_mais_proximo = min(
-        valor_minimo,
-        valor_maximo,
-        valor_medio,
-        key=lambda x: abs(x - valor_final_periodo),
-    )
-
-    # Define o nome da variável mais próxima
-    if valor_mais_proximo == valor_minimo:
-        nome_var_proxima = "Valor Mínimo"
-    elif valor_mais_proximo == valor_maximo:
-        nome_var_proxima = "Valor Máximo"
-    else:
-        nome_var_proxima = "Valor Médio"
-
-    # Cria um box com fundo laranja e texto em negrito
-    st.markdown(
-        f"""
-        <div style="background-color: orange; padding: 10px">
-            <p style="font-weight: bold; color: black">
-                Valor Atual está mais próximo de {nome_var_proxima}:
-            </p>
-            <p style="font-size: 18px; color: black">
-                Valor Atual: R$ {valor_final_periodo:.2f}<br>
-                {nome_var_proxima}: R$ {valor_mais_proximo:.2f}
-            </p>
-        </div>
-    """,
-        unsafe_allow_html=True,
-    )
-
-    # Plotar gráfico com preços, médias móveis e setas para cruzamentos
-    st.subheader("Gráfico de Médias Móveis com Cruzamentos")
-    fig_ma_cruzamentos = go.Figure()
-
-    fig_ma_cruzamentos.add_trace(
-        go.Scatter(
-            x=df_valores["Date"],
-            y=df_valores["Close"],
-            name="Preço de Fechamento",
-            line_color="blue",
-        )
-    )
-    fig_ma_cruzamentos.add_trace(
-        go.Scatter(
-            x=df_valores["Date"],
-            y=df_valores["MA15"],
-            name="Média Móvel de 15 períodos",
-            line_color="orange",
-        )
-    )
-    fig_ma_cruzamentos.add_trace(
-        go.Scatter(
-            x=df_valores["Date"],
-            y=df_valores["MA50"],
-            name="Média Móvel de 50 períodos",
-            line_color="green",
-        )
-    )
-
-    # Adicionar setas para cruzamentos
-    for index, row in df_valores.iterrows():
-        if (
-            index > 0
-            and df_valores.at[index, "Cruzamento"]
-            * df_valores.at[index - 1, "Cruzamento"]
-            < 0
-        ):
-            arrow_color = "green" if df_valores.at[index, "Cruzamento"] > 0 else "red"
-            fig_ma_cruzamentos.add_annotation(
-                x=row["Date"],
-                y=row["Close"],
-                ax=row["Date"],
-                ay=row["Close"],
-                showarrow=True,
-                arrowhead=1,
-                arrowsize=2,
-                arrowwidth=2,
-                arrowcolor=arrow_color,
-            )
-
-    fig_ma_cruzamentos.update_layout(
-        title="Gráfico de Preços e Médias Móveis com Cruzamentos"
-    )
-    st.plotly_chart(fig_ma_cruzamentos)
-
-
-with st.expander("Minhas Ações"):
-
-    st.title("Minhas Ações")
-
-    # Seção de verificação de ação nos dois dataframes
-    st.subheader("Verificação de Ação")
-    ticker_selecionado = df_acao.iloc[0]["sigla_acao"]
-    ticker_selecionado = ticker_selecionado + ".SA"
-
-    if ticker_selecionado in df_minhas_acoes["ticker"].values:
-        st.write("A ação selecionada está presente nos seus ativos.")
-        # Filtra o registro da ação selecionada
-        acao_registro = df_minhas_acoes[df_minhas_acoes["ticker"] == ticker_selecionado]
-
-        # Exibe o registro da ação
-        st.write("Registro da Ação:")
-        st.write(acao_registro)
-
-        # Obtém a data de hoje
-        data_atual = datetime.today()
-
-        # Obtém a quantidade do registro da ação selecionada
-        quantidade = acao_registro["quantidade"].values[0]
-
-        # Filtra os dados entre as datas da coluna 'data' em df_minhas_acoes e a data atual
-        # data_inicio = min(df_minhas_acoes["data"])
-        # Supondo que a coluna "data" seja uma string representando datas
-        df_minhas_acoes["data"] = pd.to_datetime(df_minhas_acoes["data"])
-        # Agora você pode encontrar a data mínima corretamente
-        data_inicio = min(df_minhas_acoes["data"])
-
-        data_fim = data_atual
-        mask = (df_valores["Date"] >= data_inicio) & (df_valores["Date"] <= data_fim)
-        df_valores_filtrado = df_valores.loc[mask]
-
-        # Agrupa por mês/ano e calcula a média de 'Adj Close'
-        df_valores_filtrado["YearMonth"] = df_valores_filtrado["Date"].dt.to_period("M")
-        media_por_mes = df_valores_filtrado.groupby("YearMonth")["Adj Close"].mean()
-
-        # Seleciona os três meses com maiores médias
-        tres_meses_mais_altos = media_por_mes.nlargest(3)
-
-        st.subheader("Três meses com maiores médias de Adj Close:")
-        st.subheader("desde quando comprei")
-
-        for year_month, media in tres_meses_mais_altos.items():
-            st.write(
-                # f"Mês/Ano: {year_month}, Média: {media:.2f}, Delta: {(media-valor_pago)*quantidade:.2f}"
-            )
-
-        # Seleciona os três meses com menores médias
-        tres_meses_menos_altos = media_por_mes.nsmallest(3)
-
-        st.subheader("Três meses com menores médias de Adj Close:")
-        st.subheader("desde quando comprei")
-        for year_month, media in tres_meses_menos_altos.items():
-            st.write(
-                # f"Mês/Ano: {year_month}, Média: {media:.2f}, Delta: {(media-valor_pago)*quantidade:.2f}"
-            )
-
-    else:
-        st.write(
-            f"A ação selecionada {ticker_selecionado}, não está presente nos seus ativos {df_minhas_acoes['ticker'].values}."
-        )
+st.title("Simulador de Investimentos")
+
+def listar_tickers_disponiveis():
+    if os.path.exists('cotacoes'):
+        arquivos = [f.replace('.csv', '') for f in os.listdir('cotacoes') if f.endswith('.csv')]
+        return sorted(arquivos)
+    return []
+
+def carregar_dados_acao(ticker):
+    arquivo = f'cotacoes/{ticker}.csv'
+    if os.path.exists(arquivo):
+        try:
+            df = pd.read_csv(arquivo)
+            # Converter colunas numéricas para float
+            for col in ['Open', 'High', 'Low', 'Close', 'Adj Close', 'Volume']:
+                if col in df.columns:
+                    df[col] = pd.to_numeric(df[col], errors='coerce')
+            df['Date'] = pd.to_datetime(df['Date'])
+            return df
+        except Exception as e:
+            st.error(f'Erro ao ler arquivo {arquivo}: {str(e)}')
+            return None
+    return None
+
+# Lista de tickers disponíveis
+tickers_disponiveis = listar_tickers_disponiveis()
+
+# Seleção do ticker via combo box
+ticker = st.selectbox('Selecione o ativo:', tickers_disponiveis)
+
+# Link fixo para importação
+st.markdown("Caso o ticker não esteja na lista, [clique aqui para importar](/importa_cotacoes)")
+
+if ticker:
+    df_valores = carregar_dados_acao(ticker)
+    
+    if df_valores is not None:
+        # Interface do usuário para entrada de dados
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            data_compra_sim = st.date_input("Data de Compra (Simulação)", 
+                                          min_value=df_valores['Date'].min().date(),
+                                          max_value=df_valores['Date'].max().date())
+            valor_sim = st.number_input("Valor de investimento (R$):", value=1000.00, step=0.01)
+            
+        with col2:
+            data_venda_sim = st.date_input("Data de Venda (Simulação)",
+                                         min_value=data_compra_sim,
+                                         max_value=df_valores['Date'].max().date())
+        
+        # Simular a compra
+        dados_compra = df_valores[df_valores['Date'].dt.date == data_compra_sim]
+        if dados_compra.empty:
+            # Encontra a próxima data disponível
+            proxima_data = df_valores[df_valores['Date'].dt.date > data_compra_sim]['Date'].min()
+            if pd.isna(proxima_data):
+                st.error(f"Não há dados disponíveis após {data_compra_sim}")
+            else:
+                dados_compra = df_valores[df_valores['Date'] == proxima_data]
+                st.warning(f"Dados não disponíveis para {data_compra_sim}. Usando próxima data disponível: {proxima_data.date()}")
+        
+        if not dados_compra.empty:
+            close_compra = dados_compra.iloc[0]['Close']
+            quantidade_comprada = valor_sim / close_compra
+            
+            # Simular a venda
+            dados_venda = df_valores[df_valores['Date'].dt.date == data_venda_sim]
+            if dados_venda.empty:
+                # Encontra a data anterior disponível
+                data_anterior = df_valores[df_valores['Date'].dt.date < data_venda_sim]['Date'].max()
+                if pd.isna(data_anterior):
+                    st.error(f"Não há dados disponíveis antes de {data_venda_sim}")
+                else:
+                    dados_venda = df_valores[df_valores['Date'] == data_anterior]
+                    st.warning(f"Dados não disponíveis para {data_venda_sim}. Usando data anterior disponível: {data_anterior.date()}")
+            
+            if not dados_venda.empty:
+                close_venda = dados_venda.iloc[0]['Close']
+                valor_vendido = quantidade_comprada * close_venda
+                lucro_prejuizo = valor_vendido - valor_sim
+                
+                # Exibir resultados
+                col3, col4, col5 = st.columns(3)
+                
+                with col3:
+                    st.metric("Quantidade de ações", f"{quantidade_comprada:.2f}")
+                
+                with col4:
+                    st.metric("Preço de compra", f"R$ {close_compra:.2f}")
+                
+                with col5:
+                    st.metric("Preço de venda", f"R$ {close_venda:.2f}")
+                
+                # Exibir resultado final
+                cor = "green" if lucro_prejuizo >= 0 else "red"
+                st.markdown(
+                    f"""
+                    <div style='padding: 10px; border-radius: 5px; background-color: {cor}; color: white; text-align: center; margin: 10px 0;'>
+                        <h3>Resultado: R$ {lucro_prejuizo:.2f} ({(lucro_prejuizo/valor_sim*100):.2f}%)</h3>
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
+                
+                # Gráfico
+                fig = go.Figure()
+                fig.add_trace(go.Scatter(
+                    x=df_valores['Date'],
+                    y=df_valores['Close'],
+                    name='Preço',
+                    line=dict(color='blue')
+                ))
+                
+                # Adicionar marcadores para compra e venda
+                fig.add_trace(go.Scatter(
+                    x=[dados_compra.iloc[0]['Date']],
+                    y=[close_compra],
+                    mode='markers',
+                    name='Compra',
+                    marker=dict(color='green', size=12)
+                ))
+                
+                fig.add_trace(go.Scatter(
+                    x=[dados_venda.iloc[0]['Date']],
+                    y=[close_venda],
+                    mode='markers',
+                    name='Venda',
+                    marker=dict(color='red', size=12)
+                ))
+                
+                fig.update_layout(
+                    title=f'Histórico de preços - {ticker}',
+                    xaxis_title='Data',
+                    yaxis_title='Preço (R$)',
+                    hovermode='x unified'
+                )
+                
+                st.plotly_chart(fig)
