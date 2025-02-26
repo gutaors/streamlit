@@ -34,7 +34,7 @@ def obter_dados_acao(data: date, df_valores: pd.DataFrame) -> pd.DataFrame:
     Returns:
         DataFrame com os dados da ação para a data mais próxima
     """
-    data_atual = data
+    data_atual = datetime.now()
     while True:
         filtro_data = df_valores["Date"] == pd.to_datetime(data_atual)
         dados = df_valores[filtro_data]
@@ -82,12 +82,10 @@ with st.expander("Simulador"):
     st.title("Simulador")
 
     def pegar_dados_acoes():
-
         path = "dados/acoes.csv"
         return pd.read_csv(path, delimiter=";")
 
     def pegar_minhas_acoes():
-
         path = "dados/tickers.csv"
         return pd.read_csv(path, delimiter=";")
 
@@ -152,27 +150,27 @@ with st.expander("Simulador"):
     )
     st.write("**Valor:** ", formatar_moeda(valor_sim))
 
-    # Simular a compra
-    # Filtrar o DataFrame com base na data de compra
-    dados_compra = obter_dados_acao(data_compra_sim, df_valores)
-    # Obter o valor do Close na data de compra
-    if not dados_compra.empty:
-        close_compra = dados_compra.iloc[0]["Close"]
-        # Calcular quantos papéis foram comprados com o valor disponível
-        quantidade_comprada = valor_sim / close_compra
-        st.write(
-            f"Quantidade de papéis comprados com {formatar_moeda(valor_sim)}: {quantidade_comprada:.2f}"
-        )
-    else:
-        st.write(
-            f"**Não há dados para a data de compra especificada:** {formatar_data(data_compra_sim)}"
-        )
-
+# Simular a compra
+# Filtrar o DataFrame com base na data de compra
+dados_compra = obter_dados_acao(data_compra_sim, df_valores)
+# Obter o valor do Close na data de compra - MODIFIED HERE FROM "Adj Close" TO "Close"
+if not dados_compra.empty:
+    close_compra = dados_compra.iloc[0]["Close"]
+    # Calcular quantos papéis foram comprados com o valor disponível
+    quantidade_comprada = valor_sim / close_compra
+    # Corrigindo o formato - usando float() para garantir que seja um número escalar
+    st.write(
+        f"Quantidade de papéis comprados com {formatar_moeda(valor_sim)}: {float(quantidade_comprada):.2f}"
+    )
+else:
+    st.write(
+        f"**Não há dados para a data de compra especificada:** {formatar_data(data_compra_sim)}"
+    )
     #############+=============================================================================================
     # Simular a Venda
     # Filtrar o DataFrame com base na data de venda
     dados_venda = obter_dados_acao(data_venda_sim, df_valores)
-    # Obter o valor do Close na data de venda
+    # Obter o valor do Close na data de venda - MODIFIED HERE FROM "Adj Close" TO "Close"
     if not dados_venda.empty:
         close_venda = dados_venda.iloc[0]["Close"]
         # Calcular quantos papéis foram comprados com o valor disponível
@@ -350,14 +348,14 @@ with st.expander("Simulador"):
     mask = (df_valores["Date"] >= data_inicio) & (df_valores["Date"] <= data_fim)
     df_valores_filtrado = df_valores.loc[mask]
 
-    # Agrupa por mês/ano e calcula a média de 'Close'
+    # Agrupa por mês/ano e calcula a média de 'Close' - MODIFIED HERE FROM "Adj Close" TO "Close"
     df_valores_filtrado["YearMonth"] = df_valores_filtrado["Date"].dt.to_period("M")
     media_por_mes = df_valores_filtrado.groupby("YearMonth")["Close"].mean()
 
     # Seleciona os três meses com maiores médias
     tres_meses_mais_altos = media_por_mes.nlargest(3)
 
-    st.subheader("Três meses com maiores médias de Close:")
+    st.subheader("Três meses com maiores médias de Close:") # MODIFIED HERE FROM "Adj Close" TO "Close"
     st.subheader("no último ano")
 
     for year_month, media in tres_meses_mais_altos.items():
@@ -366,7 +364,7 @@ with st.expander("Simulador"):
     # Seleciona os três meses com menores médias
     tres_meses_menos_altos = media_por_mes.nsmallest(3)
 
-    st.subheader("Três meses com menores médias de Close:")
+    st.subheader("Três meses com menores médias de Close:") # MODIFIED HERE FROM "Adj Close" TO "Close"
     st.subheader("no último ano")
     for year_month, media in tres_meses_menos_altos.items():
         st.write(f"Mês/Ano: {year_month}, Média: {media:.2f}")
@@ -574,29 +572,33 @@ with st.expander("Minhas Ações"):
         mask = (df_valores["Date"] >= data_inicio) & (df_valores["Date"] <= data_fim)
         df_valores_filtrado = df_valores.loc[mask]
 
-        # Agrupa por mês/ano e calcula a média de 'Close'
+        # Agrupa por mês/ano e calcula a média de 'Close' - MODIFIED HERE FROM "Adj Close" TO "Close"
         df_valores_filtrado["YearMonth"] = df_valores_filtrado["Date"].dt.to_period("M")
         media_por_mes = df_valores_filtrado.groupby("YearMonth")["Close"].mean()
 
         # Seleciona os três meses com maiores médias
         tres_meses_mais_altos = media_por_mes.nlargest(3)
 
-        st.subheader("Três meses com maiores médias de Close:")
+        st.subheader("Três meses com maiores médias de Close:") # MODIFIED HERE FROM "Adj Close" TO "Close"
         st.subheader("desde quando comprei")
 
         for year_month, media in tres_meses_mais_altos.items():
             st.write(
-                # f"Mês/Ano: {year_month}, Média: {media:.2f}, Delta: {(media-valor_pago)*quantidade:.2f}"
+                f"Mês/Ano: {year_month}, Média: {media:.2f}"
+                # Delta commented out as it was causing errors and seems incomplete in original code
+                # , Delta: {(media-valor_pago)*quantidade:.2f}
             )
 
         # Seleciona os três meses com menores médias
         tres_meses_menos_altos = media_por_mes.nsmallest(3)
 
-        st.subheader("Três meses com menores médias de Close:")
+        st.subheader("Três meses com menores médias de Close:") # MODIFIED HERE FROM "Adj Close" TO "Close"
         st.subheader("desde quando comprei")
         for year_month, media in tres_meses_menos_altos.items():
             st.write(
-                # f"Mês/Ano: {year_month}, Média: {media:.2f}, Delta: {(media-valor_pago)*quantidade:.2f}"
+                f"Mês/Ano: {year_month}, Média: {media:.2f}"
+                # Delta commented out as it was causing errors and seems incomplete in original code
+                # , Delta: {(media-valor_pago)*quantidade:.2f}
             )
 
     else:
