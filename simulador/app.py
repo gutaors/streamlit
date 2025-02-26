@@ -155,9 +155,9 @@ with st.expander("Simulador"):
     # Simular a compra
     # Filtrar o DataFrame com base na data de compra
     dados_compra = obter_dados_acao(data_compra_sim, df_valores)
-    # Obter o valor do Adj Close na data de compra
+    # Obter o valor do Close na data de compra
     if not dados_compra.empty:
-        close_compra = dados_compra.iloc[0]["Adj Close"]
+        close_compra = dados_compra.iloc[0]["Close"]
         # Calcular quantos papéis foram comprados com o valor disponível
         quantidade_comprada = valor_sim / close_compra
         st.write(
@@ -172,9 +172,9 @@ with st.expander("Simulador"):
     # Simular a Venda
     # Filtrar o DataFrame com base na data de venda
     dados_venda = obter_dados_acao(data_venda_sim, df_valores)
-    # Obter o valor do Adj Close na data de venda
+    # Obter o valor do Close na data de venda
     if not dados_venda.empty:
-        close_venda = dados_venda.iloc[0]["Adj Close"]
+        close_venda = dados_venda.iloc[0]["Close"]
         # Calcular quantos papéis foram comprados com o valor disponível
         ###print(close_compra)
         # quantidade_comprada = valor_sim / close_compra
@@ -350,14 +350,14 @@ with st.expander("Simulador"):
     mask = (df_valores["Date"] >= data_inicio) & (df_valores["Date"] <= data_fim)
     df_valores_filtrado = df_valores.loc[mask]
 
-    # Agrupa por mês/ano e calcula a média de 'Adj Close'
+    # Agrupa por mês/ano e calcula a média de 'Close'
     df_valores_filtrado["YearMonth"] = df_valores_filtrado["Date"].dt.to_period("M")
-    media_por_mes = df_valores_filtrado.groupby("YearMonth")["Adj Close"].mean()
+    media_por_mes = df_valores_filtrado.groupby("YearMonth")["Close"].mean()
 
     # Seleciona os três meses com maiores médias
     tres_meses_mais_altos = media_por_mes.nlargest(3)
 
-    st.subheader("Três meses com maiores médias de Adj Close:")
+    st.subheader("Três meses com maiores médias de Close:")
     st.subheader("no último ano")
 
     for year_month, media in tres_meses_mais_altos.items():
@@ -366,7 +366,7 @@ with st.expander("Simulador"):
     # Seleciona os três meses com menores médias
     tres_meses_menos_altos = media_por_mes.nsmallest(3)
 
-    st.subheader("Três meses com menores médias de Adj Close:")
+    st.subheader("Três meses com menores médias de Close:")
     st.subheader("no último ano")
     for year_month, media in tres_meses_menos_altos.items():
         st.write(f"Mês/Ano: {year_month}, Média: {media:.2f}")
@@ -574,14 +574,14 @@ with st.expander("Minhas Ações"):
         mask = (df_valores["Date"] >= data_inicio) & (df_valores["Date"] <= data_fim)
         df_valores_filtrado = df_valores.loc[mask]
 
-        # Agrupa por mês/ano e calcula a média de 'Adj Close'
+        # Agrupa por mês/ano e calcula a média de 'Close'
         df_valores_filtrado["YearMonth"] = df_valores_filtrado["Date"].dt.to_period("M")
-        media_por_mes = df_valores_filtrado.groupby("YearMonth")["Adj Close"].mean()
+        media_por_mes = df_valores_filtrado.groupby("YearMonth")["Close"].mean()
 
         # Seleciona os três meses com maiores médias
         tres_meses_mais_altos = media_por_mes.nlargest(3)
 
-        st.subheader("Três meses com maiores médias de Adj Close:")
+        st.subheader("Três meses com maiores médias de Close:")
         st.subheader("desde quando comprei")
 
         for year_month, media in tres_meses_mais_altos.items():
@@ -592,7 +592,7 @@ with st.expander("Minhas Ações"):
         # Seleciona os três meses com menores médias
         tres_meses_menos_altos = media_por_mes.nsmallest(3)
 
-        st.subheader("Três meses com menores médias de Adj Close:")
+        st.subheader("Três meses com menores médias de Close:")
         st.subheader("desde quando comprei")
         for year_month, media in tres_meses_menos_altos.items():
             st.write(
