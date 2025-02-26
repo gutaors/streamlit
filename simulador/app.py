@@ -1,33 +1,66 @@
-# FALTA FAZER
-# qual ação minha que está dando mais lucro hoje
-# qual ação minha que está dando mais preju hoje
-# o valor que paguei foi x
-# o valor máximo foi x em data tal
-# mes com maior volume negociado, volume e média diária
-# o mês com melhor mediana foi tal, mediana tal
-# o mês com pior mediana foi tal, mediana tal
-# se vale mostrar valor do minério
-# se petrobras mostrar valor do petroleo
-# média móvel com setinha para 1 mes
-# média móvel com setinha para 3 meses
+# Standard library imports
+import os
+from datetime import date, datetime, timedelta
 
-
+# Third-party imports
 import streamlit as st
 from streamlit_option_menu import option_menu
 import yfinance as yf
-from datetime import date, datetime, timedelta
 import pandas as pd
-import plotly.graph_objs as go
-import os
-
-# importei depois
-from datetime import datetime, timedelta
 import pandas_datareader.data as web
+import plotly.graph_objs as go
 import matplotlib.pyplot as plt
 
-# from fbprophet import Prophet
-# from fbprophet.plot import plot_plotly, plot_components_plotly
-from plotly import graph_objs as go
+# Constantes
+DATA_INICIO = "2015-01-05"
+DATA_FIM = date.today().strftime("%Y-%m-%d")
+
+def formatar_moeda(valor: float) -> str:
+    """Formata um valor numérico para o formato de moeda brasileira."""
+    return f"R$ {valor:.2f}"
+
+def formatar_data(data: date) -> str:
+    """Formata uma data para o padrão brasileiro."""
+    return data.strftime("%d/%m/%Y")
+
+def obter_dados_acao(data: date, df_valores: pd.DataFrame) -> pd.DataFrame:
+    """
+    Obtém dados de uma ação para uma data específica, retrocedendo até encontrar dados válidos.
+    
+    Args:
+        data: Data desejada
+        df_valores: DataFrame com histórico de valores
+        
+    Returns:
+        DataFrame com os dados da ação para a data mais próxima
+    """
+    data_atual = data
+    while True:
+        filtro_data = df_valores["Date"] == pd.to_datetime(data_atual)
+        dados = df_valores[filtro_data]
+        if not dados.empty:
+            return dados
+        data_atual -= timedelta(days=1)
+
+def calcular_resultado_operacao(valor_inicial: float, qtde_papeis: float, preco_venda: float) -> dict:
+    """
+    Calcula o resultado de uma operação de compra e venda.
+    
+    Args:
+        valor_inicial: Valor investido
+        qtde_papeis: Quantidade de papéis comprados
+        preco_venda: Preço de venda unitário
+        
+    Returns:
+        Dicionário com valor final e resultado da operação
+    """
+    valor_final = qtde_papeis * preco_venda
+    resultado = valor_final - valor_inicial
+    return {
+        "valor_final": valor_final,
+        "resultado": resultado,
+        "cor_indicador": "green" if resultado >= 0 else "red"
+    }
 
 # codigo para processar
 df_tickers = pd.read_csv("dados/tickers.csv", sep=";")
@@ -36,8 +69,6 @@ tickers = df_tickers["ticker"].tolist()
 # Crie uma lista vazia para armazenar os DataFrames de cotações
 df_list = []
 
-
-
 st.sidebar.header("Escolha a ação")
 
 n_dias = st.slider("Quantidade de dias de previsão", 30, 365)
@@ -45,10 +76,6 @@ n_dias = st.slider("Quantidade de dias de previsão", 30, 365)
 # Criando a sidebar DATAS
 st.sidebar.header("Filtros")
 
-
-# codigo do dashboard
-DATA_INICIO = "2015-01-05"
-DATA_FIM = date.today().strftime("%Y-%m-%d")
 st.title("Análise de ações")
 
 with st.expander("Simulador"):
@@ -119,45 +146,32 @@ with st.expander("Simulador"):
     st.subheader("Simulação - " + nome_acao_escolhida)
     st.write(
         "**Data da compra:**",
-        data_compra_sim.strftime("%d/%m/%Y"),
+        formatar_data(data_compra_sim),
         "  **Data da venda:**",
-        data_venda_sim.strftime("%d/%m/%Y"),
+        formatar_data(data_venda_sim),
     )
-    st.write("**Valor:** ", f"R$ {valor_sim:.2f}")
+    st.write("**Valor:** ", formatar_moeda(valor_sim))
 
     # Simular a compra
     # Filtrar o DataFrame com base na data de compra
-    filtro_data = df_valores["Date"] == pd.to_datetime(data_compra_sim)
-    dados_compra = df_valores[filtro_data]
-    # caso data de compra não tenha dados retrocede um dia até ter
-    while dados_compra.empty:
-        data_compra_sim = data_compra_sim - timedelta(days=1)
-        filtro_data = df_valores["Date"] == pd.to_datetime(data_compra_sim)
-        dados_compra = df_valores[filtro_data]
+    dados_compra = obter_dados_acao(data_compra_sim, df_valores)
     # Obter o valor do Adj Close na data de compra
     if not dados_compra.empty:
         close_compra = dados_compra.iloc[0]["Adj Close"]
         # Calcular quantos papéis foram comprados com o valor disponível
         quantidade_comprada = valor_sim / close_compra
         st.write(
-            f"Quantidade de papéis comprados com {valor_sim:.2f}: {quantidade_comprada:.2f}"
+            f"Quantidade de papéis comprados com {formatar_moeda(valor_sim)}: {quantidade_comprada:.2f}"
         )
     else:
         st.write(
-            f"**Não há dados para a data de compra especificada:** {data_compra_sim.strftime('%d/%m/%Y')}"
+            f"**Não há dados para a data de compra especificada:** {formatar_data(data_compra_sim)}"
         )
 
     #############+=============================================================================================
     # Simular a Venda
     # Filtrar o DataFrame com base na data de venda
-    filtro_data = df_valores["Date"] == pd.to_datetime(data_venda_sim)
-    dados_venda = df_valores[filtro_data]
-    # caso data de compra não tenha dados retrocede um dia até ter
-    while dados_venda.empty:
-        data_venda_sim = data_venda_sim - timedelta(days=1)
-        filtro_data = df_valores["Date"] == pd.to_datetime(data_venda_sim)
-        dados_venda = df_valores[filtro_data]
-
+    dados_venda = obter_dados_acao(data_venda_sim, df_valores)
     # Obter o valor do Adj Close na data de venda
     if not dados_venda.empty:
         close_venda = dados_venda.iloc[0]["Adj Close"]
@@ -165,35 +179,33 @@ with st.expander("Simulador"):
         ###print(close_compra)
         # quantidade_comprada = valor_sim / close_compra
         valor_vendido = quantidade_comprada * close_venda
-        st.write(f"Lucro/Prejuízo: {valor_vendido-valor_sim:.2f}")
-        st.write(f"Preço ação na data da compra {close_compra:.2f}")
-        st.write(f"Preço ação na data da venda {close_venda:.2f}")
+        resultado_operacao = calcular_resultado_operacao(valor_sim, quantidade_comprada, close_venda)
+        st.write(f"Lucro/Prejuízo: {formatar_moeda(resultado_operacao['resultado'])}")
+        st.write(f"Preço ação na data da compra {formatar_moeda(close_compra)}")
+        st.write(f"Preço ação na data da venda {formatar_moeda(close_venda)}")
         ############## FORMATADO
         # Formate a data de compra
-        data_compra_formatada = data_compra_sim.strftime("%d/%m/%Y")
-        data_venda_formatada = data_venda_sim.strftime("%d/%m/%Y")
+        data_compra_formatada = formatar_data(data_compra_sim)
+        data_venda_formatada = formatar_data(data_venda_sim)
         # Formate o valor_sim como moeda
-        valor_formatado = f"R$ {valor_vendido-valor_sim:.2f}"  # Exemplo formatado em reais brasileiros
+        valor_formatado = formatar_moeda(resultado_operacao['resultado'])  # Exemplo formatado em reais brasileiros
 
         # Defina a cor do botão com base no valor
-        if valor_vendido - valor_sim >= 0:
-            cor_botao = "background-color: green; color: white"
-        else:
-            cor_botao = "background-color: red; color: white"
+        cor_botao = resultado_operacao['cor_indicador']
 
         # Exiba os valores dentro de botões coloridos
         st.markdown(
             "<div style='display: flex; justify-content: space-between;'>"
-            f"<div style='{cor_botao}; padding: 10px; border-radius: 5px;'>Data da Compra: {data_compra_formatada}</div>"
-            f"<div style='{cor_botao}; padding: 10px; border-radius: 5px;'>Data da Venda: {data_venda_formatada}</div>"
-            f"<div style='{cor_botao}; padding: 10px; border-radius: 5px;'>Lucro/Prejuízo: {valor_vendido-valor_sim:.2f}</div>"
+            f"<div style='background-color: {cor_botao}; color: white; padding: 10px; border-radius: 5px;'>Data da Compra: {data_compra_formatada}</div>"
+            f"<div style='background-color: {cor_botao}; color: white; padding: 10px; border-radius: 5px;'>Data da Venda: {data_venda_formatada}</div>"
+            f"<div style='background-color: {cor_botao}; color: white; padding: 10px; border-radius: 5px;'>Lucro/Prejuízo: {formatar_moeda(resultado_operacao['resultado'])}</div>"
             "</div>",
             unsafe_allow_html=True,
         )
 
         ############## FORMATADO
     else:
-        f"**Não há dados para a data de venda especificada:** {data_venda_sim.strftime('%d/%m/%Y')}"
+        f"**Não há dados para a data de venda especificada:** {formatar_data(data_venda_sim)}"
 
     st.write(df_valores.tail(3))
 
