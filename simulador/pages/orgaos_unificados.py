@@ -1,3 +1,53 @@
+'''
+QUERIES PARA GERAR OS CSVs
+
+        select  concat(vop.ORG_SUPER_PADR_NOME,
+                    ' [', vop.ORG_SUPER_PADR_SIGLA, ']' ,
+                    ' [', vop.ORG_SUPER_PADR_CODIGO, ']') as ORG_SUPER_BUSCA,
+                vop.ORG_SUPER_PADR_NOME,
+                concat(vop.ORG_PADR_NOME,
+                            ' [', vop.ORG_PADR_SIGLA, ']' ,
+                            ' [', vop.ORG_PADR_CODIGO, ']') as ORG_PADR_BUSCA,
+                vop.ORG_PADR_NOME,
+                vop.ORG_PADR_SIGLA,
+                vop.ORG_PADR_CODIGO,
+                concat(ou.ORGAO_UNIFICADO_NOME,
+                    ' [', ou.ORGAO_UNIFICADO_SIGLA, ']' ,
+                    ' [', ou.ORGAO_UNIFICADO_ID_ORIGEM, ']',
+                    ' [', ou.ORGAO_UNIFICADO_FONTE, ']') as ORG_UNIF_BUSCA,
+                vop.ORGAO_UNIFICADO_ID,
+                ou.ORGAO_UNIFICADO_FONTE,
+                ou.ORGAO_UNIFICADO_ID_ORIGEM,
+                ou.ORGAO_UNIFICADO_NOME,
+                ou.ORGAO_UNIFICADO_SIGLA,
+                ou.ORGAO_UNIFICADO_SITUACAO,
+                ou.ORGAO_UNIFICADO_COD_SIORG_ORIGEM,
+                ou.ORG_PADR_ID,
+                ou.ORGAO_UNIFICADO_DT_ATUALIZACAO
+        from PGG_DW.DW_APF_GERAL.VW_DM_ORG_PADRONIZADO_NOVO vop
+        inner join PGG_DW.DW_APF_GERAL.DM_ORGAO_UNIFICADO_NOVO ou
+            on ou.ORGAO_UNIFICADO_ID = vop.ORGAO_UNIFICADO_ID
+        order by 1, 2;
+
+
+
+        select  ID_UNIDADE_ORGANIZACIONAL,
+                CO_UNIDADE_ORGANIZACIONAL,
+                NO_UNIDADE_ORGANIZACIONAL,
+                SG_UNIDADE_ORGANIZACIONAL,
+                IN_TIPO_UNIDADE_ORGANIZACIONAL,
+                SN_ATIVO,
+                DT_CRIACAO,
+                DT_ALTERACAO,
+                NO_CATEGORIA,
+                NO_NATUREZA_JURIDICA,
+                NO_SUBNATUREZA_JURIDICA
+        from PGG_DW.DM_SIORG.DM_UNIDADE_SIORG
+        where ID_TEMPO = (select max(ID_TEMPO) from PGG_DW.DM_SIORG.DM_CARGO_SIORG)
+            and CO_UNIDADE_ORGANIZACIONAL in "COD UNIDADE ORGANIZACIONAL";
+
+'''
+
 import locale
 import pandas as pd
 import streamlit as st
