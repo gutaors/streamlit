@@ -184,7 +184,7 @@ def main():
         if not orgaos_nao_ok_siafi.empty:
             for index, row in orgaos_nao_ok_siafi.iterrows():
                 st.write(f"Buscando por: {row['ORG_PADR_NOME.1']}")
-                resultados = buscar_semantica(df_orgaos_siafi, row['ORG_PADR_NOME.1'] + ' ' + row['ORG_PADR_SIGLA.1'], top_n=3, model=model)
+                resultados = buscar_semantica(df_orgaos_siafi, row['ORG_PADR_NOME.1'] + ' ' + row['ORG_PADR_SIGLA.1'], top_n=5, model=model)
                 st.write("Resultados da Busca Semântica:")
                 st.dataframe(resultados)
 
