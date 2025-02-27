@@ -1,0 +1,6 @@
+streamlit
+pandas
+pyvis
+matplotlib
+deepseek
+sentence_transformers
