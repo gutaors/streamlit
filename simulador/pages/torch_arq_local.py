@@ -5,6 +5,7 @@ import torch
 from transformers import GPT2LMHeadModel, GPT2Tokenizer
 import matplotlib.pyplot as plt
 import datetime as dt
+import numpy as np
 
 # Configuração da página
 st.set_page_config(page_title="Stock Price Prediction with GPT", layout="wide")
@@ -48,34 +49,30 @@ else:
 
             # Carrega o modelo e o tokenizador GPT-2
             st.write("Loading GPT-2 model...")
-            tokenizer = GPT2Tokenizer.from_pretrained("gpt2")
+            tokenizer = GPT2Tokenizer.from_pretrained("gpt2")  # Modelo padrão GPT-2
             model = GPT2LMHeadModel.from_pretrained("gpt2")
 
             # Codifica os preços
             encoded_prices = tokenizer.encode(" ".join([str(price) for price in prices]), return_tensors="pt")
 
-            # Configura o modelo para treino
-            model.train()
-            optimizer = torch.optim.Adam(model.parameters(), lr=5e-5)
-            model.resize_token_embeddings(len(tokenizer))
-
-            st.write("Training the model...")
-            for _ in range(3):
-                model.zero_grad()
-                outputs = model(encoded_prices, labels=encoded_prices)
-                loss = outputs.loss
-                loss.backward()
-                optimizer.step()
-
             # Gera os preços previstos
             st.write("Generating predictions...")
-            generated = model.generate(encoded_prices, max_new_tokens=10, temperature=1.0, num_return_sequences=1)
+            attention_mask = torch.ones(encoded_prices.shape, device=encoded_prices.device)
+            generated = model.generate(
+                encoded_prices,
+                attention_mask=attention_mask,
+                max_new_tokens=10,
+                temperature=1.0,
+                num_return_sequences=1
+            )
+
             generated_prices = tokenizer.decode(generated[0], skip_special_tokens=True).split()
 
             # Conversão e plotagem
             plt.figure(figsize=(12, 6))
             plt.plot(data.index, prices, label="Historical Prices")
             try:
+                # Ajuste para garantir que as previsões sejam corretamente convertidas
                 predicted_prices = [float(price.strip('[]')) for price in generated_prices[len(prices):]]
                 future_dates = data.index[-1] + pd.to_timedelta(np.arange(1, len(predicted_prices) + 1), 'D')
                 plt.plot(future_dates, predicted_prices, "g^", label="Predicted Prices")
