@@ -6,3 +6,9 @@ simulador/venv/
 /simulador/ORGAOS_DWTG_SIAFI.csv
 /simulador/streamlit-env/
 simulador/streamlit-env/
+simulador/lib/
+simulador/procfile
+streamlit-env/
+/simulador/lib/
+/simulador/procfile
+/streamlit-env/
