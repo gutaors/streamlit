@@ -1,6 +1,3 @@
-# EXEMPLO DO CURSO DA UDEMY
-#streamlit run coleta_acoes.py
-
 import streamlit as st
 import os
 import yfinance as yf
@@ -10,22 +7,19 @@ from datetime import datetime
 st.title("Coleta Preço de Ativo")
 st.header("Informações a respeito de fechamento e volume de algumas ações")
 
-# ENBR3.SA
-# BBAS3.SA
-# BBDC4.SA
-# PETR4.SA
-# VALE3.SA
+# Obtém a lista de arquivos CSV da pasta cotacoes
+pasta_cotacoes = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'cotacoes')
+arquivos_csv = [f.replace('.csv', '') for f in os.listdir(pasta_cotacoes) if f.endswith('.csv')]
+arquivos_csv.sort()  # Ordena a lista alfabeticamente
 
 opcoes = st.selectbox(
     'Escolha o Ativo',
-    ('ENBR3.SA','BBAS3.SA', 'BBDC4.SA', 'PETR4.SA', 'VALE3.SA')
+    arquivos_csv
 )
 
-#tickersimbolo = "PETR4.SA"
 tickersimbolo = opcoes
 
 tickerdata = yf.Ticker(tickersimbolo)
-
 
 tickerDF = tickerdata.history(period='1d', start = '2009-5-9', end = '2022-5-19')
 
