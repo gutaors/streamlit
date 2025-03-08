@@ -1,5 +1,8 @@
+/simulador/cotacoes/
 simulador/venv/
 /simulador/venv/
 /simulador/saved_models
 /simulador/ORGAOS_DW_APF_GERAL.csv
 /simulador/ORGAOS_DWTG_SIAFI.csv
+/simulador/streamlit-env/
+simulador/streamlit-env/
