@@ -15,11 +15,7 @@ def listar_tickers_disponiveis():
     tickers = [arquivo.replace(".csv", "") for arquivo in arquivos]
     return tickers
 
-import pandas as pd
 import yfinance as yf
-
-import pandas as pd
-import os
 
 def carregar_dados(ticker, dt_inicial, dt_final):
     caminho_arquivo = os.path.join("cotacoes", f"{ticker}.csv")
@@ -38,10 +34,7 @@ def carregar_dados(ticker, dt_inicial, dt_final):
 
     # Filtrar pelo intervalo de datas
     df = df.loc[(df.index >= pd.to_datetime(dt_inicial)) & (df.index <= pd.to_datetime(dt_final))]
-
     return df
-
-
 
 # Realizar previsão com Prophet
 def prever_dados(df, periodo):
@@ -73,7 +66,6 @@ with st.sidebar:
 # Converter dt_inicial e dt_final para string antes de passar para a função
 dados = carregar_dados(ticker, str(dt_inicial), str(dt_final))
 
-
 if dados is not None and not dados.empty:
     st.header(f"Dados da Ação - {ticker}")
     st.dataframe(dados)
@@ -92,5 +84,34 @@ if dados is not None and not dados.empty:
     previsoes["ds"] = previsoes["ds"].dt.date
     previsoes = previsoes.sort_values(by="ds", ascending=False)
     st.dataframe(previsoes, width=800, height=400)
+
+    # --- Resumo dos Números Gerados pelo Modelo e Recomendações ---
+    # Obtemos a previsão mais recente (última data prevista)
+    ultima_previsao = previsoes.iloc[0]
+    valor_previsto = ultima_previsao['yhat']
+    valor_inferior = ultima_previsao['yhat_lower']
+    valor_superior = ultima_previsao['yhat_upper']
+
+    # Pegamos o último valor real conhecido
+    ultimo_valor_real = dados["Close"].iloc[-1]
+
+    st.markdown("## **Resumo dos Números Gerados pelo Modelo**")
+    st.write("**Valor Previsto para o Último Período:**", f"{valor_previsto:.2f}")
+    st.write("**Intervalo de Confiança Inferior:**", f"{valor_inferior:.2f}")
+    st.write("**Intervalo de Confiança Superior:**", f"{valor_superior:.2f}")
+    ultimo_valor_real = float(dados["Close"].iloc[-1])
+    st.write("**Último Valor Real:**", f"{ultimo_valor_real:.2f}")
+
+    #st.write("**Último Valor Real:**", f"{ultimo_valor_real:.2f}")
+
+    # Geração da recomendação com base nos números:
+    # Se o valor previsto for maior que o último valor real, sinaliza alta; caso contrário, baixa.
+    if valor_previsto > ultimo_valor_real:
+        rec = "<span style='color: green; font-weight: bold;'>Recomendação: Tendência Altista - Recomenda-se manter ou aumentar posições de compra.</span>"
+    else:
+        rec = "<span style='color: red; font-weight: bold;'>Recomendação: Tendência Baixista - Recomenda-se cautela ou redução de posições.</span>"
+
+    st.markdown(rec, unsafe_allow_html=True)
+
 else:
     st.warning("Nenhum dado encontrado no período selecionado!")
