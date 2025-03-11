@@ -6,6 +6,7 @@ from transformers import GPT2LMHeadModel, GPT2Tokenizer
 import matplotlib.pyplot as plt
 import datetime as dt
 import numpy as np
+import re
 
 # Configuração da página
 st.set_page_config(page_title="Stock Price Prediction with GPT", layout="wide")
@@ -22,11 +23,14 @@ if not tickers:
     st.error("No ticker CSV files found in the 'cotacoes' folder.")
 else:
     ticker = st.selectbox("Select Ticker Symbol:", tickers)
-    start_date = st.date_input("Start Date:", value=dt.date(2023, 1, 1))
+    # Apenas o End Date é informado pelo usuário
     end_date = st.date_input("End Date:", value=dt.date(2023, 6, 8))
+    # Define o período ideal de 1 ano para predições
+    start_date = end_date - dt.timedelta(days=365)
+    st.write(f"Data de início automaticamente definida para: {start_date}")
 
     if start_date >= end_date:
-        st.error("Start date must be earlier than end date.")
+        st.error("A data de início calculada deve ser anterior à data final.")
     else:
         file_path = os.path.join(cotacoes_dir, f"{ticker}.csv")
         data = pd.read_csv(file_path, parse_dates=["Date"], index_col="Date")
@@ -43,35 +47,56 @@ else:
             tokenizer = GPT2Tokenizer.from_pretrained("gpt2")
             model = GPT2LMHeadModel.from_pretrained("gpt2")
 
-            # Codifica os preços convertendo-os em uma string. Utiliza truncation para não exceder o limite de tokens.
-            prices_str = " ".join([str(price) for price in prices])
-            encoded_prices = tokenizer.encode(
-                prices_str,
+            # Definindo o número de tokens que serão gerados
+            max_new_tokens = 20
+            # Ajustando o comprimento máximo de entrada para deixar espaço para os novos tokens
+            max_input_length = tokenizer.model_max_length - max_new_tokens
+
+            # Cria um prompt orientado com marcador "Predicted:"
+            prompt = "Historical Prices: " + " ".join([str(price) for price in prices]) + "\nPredicted: "
+            encoded_prompt = tokenizer.encode(
+                prompt,
                 truncation=True,
-                max_length=tokenizer.model_max_length,
+                max_length=max_input_length,
                 return_tensors="pt"
             )
 
             st.write("Generating predictions...")
-            attention_mask = torch.ones(encoded_prices.shape, device=encoded_prices.device)
+            attention_mask = torch.ones(encoded_prompt.shape, device=encoded_prompt.device)
             generated = model.generate(
-                encoded_prices,
+                encoded_prompt,
                 attention_mask=attention_mask,
-                max_new_tokens=10,
-                temperature=1.0,
+                max_new_tokens=max_new_tokens,
+                temperature=0.7,
+                do_sample=True,
+                top_k=50,
+                top_p=0.95,
                 num_return_sequences=1
             )
 
-            generated_text = tokenizer.decode(generated[0], skip_special_tokens=True).split()
-            # Assumindo que a sequência gerada contenha os tokens originais seguidos dos novos tokens,
-            # extraímos os tokens referentes às previsões.
-            predicted_prices_tokens = generated_text[len(encoded_prices[0]):]
-            try:
-                predicted_prices = [float(token.strip('[]')) for token in predicted_prices_tokens]
+            # Extraindo apenas os tokens gerados após o prompt
+            generated_tokens = generated[0]
+            predicted_tokens = generated_tokens[encoded_prompt.shape[1]:]
+            predicted_text = tokenizer.decode(predicted_tokens, skip_special_tokens=True)
+            st.write("Texto gerado para previsão:", predicted_text)
+            # Separa os tokens da previsão
+            predicted_prices_tokens = predicted_text.split()
+
+            # Conversão robusta dos tokens para números
+            predicted_prices = []
+            for token in predicted_prices_tokens:
+                try:
+                    # Remover possíveis caracteres indesejados com regex
+                    token_clean = re.sub(r"[^\d\.]+", "", token)
+                    if token_clean:
+                        predicted_prices.append(float(token_clean))
+                except ValueError:
+                    continue
+
+            if predicted_prices:
                 future_dates = data.index[-1] + pd.to_timedelta(np.arange(1, len(predicted_prices) + 1), 'D')
-            except ValueError:
-                st.error("Error parsing predicted prices.")
-                predicted_prices = []
+            else:
+                st.error("Previsões não geradas corretamente para exibir o resumo e a recomendação.")
 
             # Plotagem do gráfico com os preços históricos e as previsões
             plt.figure(figsize=(12, 6))
