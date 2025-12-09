@@ -24,7 +24,41 @@ def verificar_arquivo_existente(ticker):
 
     return os.path.exists(file_path)
 
+def atualizar_diferencial(ticker, caminho_arquivo):
+    # lê se existir
+    if os.path.exists(caminho_arquivo):
+        df_exist = pd.read_csv(caminho_arquivo, parse_dates=['Date'])  # ajuste se sua coluna tiver outro nome
+        if df_exist.empty:
+            last_date = datetime.strptime("2009-01-01", "%Y-%m-%d")
+        else:
+            last_date = df_exist['Date'].max()
+    else:
+        df_exist = pd.DataFrame()
+        last_date = datetime.strptime("2009-01-01", "%Y-%m-%d")
 
+    # data de início para buscar: dia seguinte ao último
+    start = (last_date + timedelta(days=1)).strftime('%Y-%m-%d')
+    end = datetime.today().strftime('%Y-%m-%d')
+
+    if start > end:
+        print(f"{ticker}: já atualizado até {last_date.date()}")
+        return
+
+    df_novo = yf.download(ticker, start=start, end=end).reset_index()
+    if df_novo.empty:
+        print(f"{ticker}: sem novos dados entre {start} e {end}")
+        return
+
+    # unir sem duplicatas (baseado na coluna Date)
+    if not df_exist.empty:
+        df_comb = pd.concat([df_exist, df_novo], ignore_index=True)
+        df_comb.drop_duplicates(subset=['Date'], keep='first', inplace=True)
+    else:
+        df_comb = df_novo
+
+    # salvar (substitui)
+    df_comb.to_csv(caminho_arquivo, index=False)
+    print(f"{ticker}: atualizado até {df_comb['Date'].max().date()}")
 
 def verificar_ticker_real(ticker: str) -> bool:
     """
@@ -201,25 +235,53 @@ def main():
             files = sorted(os.listdir(directory))
 
             if files:
-                st.write("Atualizando cotações com base nos arquivos no diretório 'cotacoes':")
+                st.write("Atualizando cotações de forma incremental com base nos arquivos no diretório 'cotacoes':")
 
                 for file in files:
-                    # Exibir o nome do arquivo
                     st.write(f"- Processando: {file}")
-
-                    # Construir o caminho completo do arquivo
                     file_path = os.path.join(directory, file)
 
                     if os.path.isfile(file_path):
-                        # Extrair o nome do arquivo sem a extensão como ticker
+
+                        # Extrair o ticker a partir do nome do arquivo
                         ticker = os.path.splitext(file)[0]
 
-                        # Apagar o arquivo
-                        os.remove(file_path)
-                        st.write(f"  Arquivo '{file}' removido.")
+                        try:
+                            # Carregar CSV existente
+                            df_existente = pd.read_csv(file_path)
 
-                        # Chamar a função baixa_cotacoes
-                        baixa_cotacoes(ticker)
+                            # Verificar se existe coluna de data
+                            if "Date" not in df_existente.columns:
+                                st.error(f"Arquivo '{file}' não contém coluna 'Date'. Pulando.")
+                                continue
+
+                            # Encontrar última data
+                            ultima_data = pd.to_datetime(df_existente["Date"]).max()
+                            proxima_data = (ultima_data + pd.Timedelta(days=1)).strftime("%Y-%m-%d")
+
+                            st.write(f"  Última data encontrada: {ultima_data.date()}")
+
+                            # Baixar somente dados novos
+                            df_novo = yf.download(ticker, start=proxima_data).reset_index()
+
+                            if df_novo.empty:
+                                st.info(f"  Nenhuma nova cotação encontrada para {ticker}.")
+                                continue
+
+                            # Concatenar
+                            df_atualizado = pd.concat([df_existente, df_novo], ignore_index=True)
+
+                            # Remover possíveis duplicatas
+                            df_atualizado.drop_duplicates(subset=["Date"], keep="last", inplace=True)
+
+                            # Salvar novamente
+                            df_atualizado.to_csv(file_path, index=False)
+
+                            st.success(f"  Dados atualizados: {len(df_novo)} novos registros adicionados.")
+
+                        except Exception as e:
+                            st.error(f"Erro ao atualizar '{file}': {e}")
+
             else:
                 st.info("O diretório 'cotacoes' está vazio.")
         else:

@@ -190,7 +190,7 @@ if not df_cut.empty:
             st.table(style_df(df_concretizacao))
 
             # Seção de Resumo
-            st.subheader("Resumo")
+            st.subheader("Resumo *vender quando recomendação é compra parece funcionar melhor*")
 
             # Calcula as médias e medianas de dias para cada tipo de recomendação
             df_compras = df_concretizacao[df_concretizacao['Recomendação'] == 'COMPRA']
