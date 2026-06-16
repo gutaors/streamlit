@@ -1,5 +1,6 @@
 altair==5.5.0
 attrs==25.3.0
+beautifulsoup4==4.12.3
 blinker==1.9.0
 cachetools==5.5.2
 certifi==2025.1.31
@@ -45,3 +46,4 @@ urllib3==2.4.0
 watchdog==6.0.0
 wheel   ==0.41.2
 yfinance==0.2.27
+pyvis
