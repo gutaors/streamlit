@@ -113,7 +113,7 @@ for i, ticker in enumerate(tickers):
             "Preço Valoriz.(R$)": round(preco_alta, 2),
             "Variação (%)": round(variacao_alta, 2),
             "Dias": dias_alta,
-            "Preço Atual (R$)": round(preco_atual, 2),
+            "Val Atual (R$)": round(preco_atual, 2),
         })
 
     # Buscar desvalorização ≥ -10%
@@ -129,13 +129,14 @@ for i, ticker in enumerate(tickers):
             "Preço Desvaloriz.(R$)": round(preco_baixa, 2),
             "Variação (%)": round(variacao_baixa, 2),
             "Dias": dias_baixa,
-            "Preço Atual (R$)": round(preco_atual, 2),
+            "Val Atual (R$)": round(preco_atual, 2),
         })
 
 barra.empty()
 
 # ── Exibição ──────────────────────────────────────────────────────────────────
-col_alta, col_baixa = st.columns(2)
+col_alta = st.container()
+col_baixa = st.container()
 
 with col_alta:
     st.subheader("🟢 Valorização ≥ +10%")
