@@ -45,5 +45,5 @@ tzdata==2025.2
 urllib3==2.4.0
 watchdog==6.0.0
 wheel   ==0.41.2
-yfinance==0.2.27
+yfinance>=1.4.1
 pyvis
