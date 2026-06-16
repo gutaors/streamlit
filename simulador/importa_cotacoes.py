@@ -7,8 +7,7 @@ import os
 st.title('Importar Cotações')
 
 # Criar diretório de cotações se não existir
-if not os.path.exists('cotacoes'):
-    os.makedirs('cotacoes')
+os.makedirs('cotacoes', exist_ok=True)
 
 # Função para listar tickers já importados
 def listar_tickers_importados():
@@ -20,7 +19,11 @@ def listar_tickers_importados():
 def baixar_dados_yahoo(ticker, data_inicio, data_fim):
     try:
         ticker_yf = ticker if ticker.endswith('.SA') else f'{ticker}.SA'
-        df = yf.download(ticker_yf, start=data_inicio, end=data_fim)
+        data_fim_inclusive = data_fim + timedelta(days=1)
+        try:
+            df = yf.download(ticker_yf, start=data_inicio, end=data_fim_inclusive, multi_level_index=False)
+        except TypeError:
+            df = yf.download(ticker_yf, start=data_inicio, end=data_fim_inclusive)
         if df.empty:
             return None, "Nenhum dado encontrado para este ticker"
         df.reset_index(inplace=True)
@@ -35,6 +38,14 @@ def validar_ticker(ticker):
     if len(ticker) < 4:
         return False, "Ticker deve ter pelo menos 4 caracteres"
     return True, ""
+
+# Função para salvar o DataFrame localmente em CSV
+def salvar_dataframe(ticker: str, df: pd.DataFrame):
+    nome_arquivo = f"{ticker.upper()}.csv"
+    caminho_pasta = "cotacoes"
+    os.makedirs(caminho_pasta, exist_ok=True)
+    caminho_arquivo = os.path.join(caminho_pasta, nome_arquivo)
+    df.to_csv(caminho_arquivo, index=False)
 
 # Interface principal
 col1, col2 = st.columns([2, 1])

@@ -69,6 +69,9 @@ if not ultimos_dados.empty:
         col2.metric("Volume", f"{ultimo_volume:,}")
         col2.write("Último volume negociado")
 
+
+
+
 if not df_cut.empty:
     # Cálculo das Médias Móveis
     df_cut['MM50'] = df_cut['Close'].rolling(window=50).mean()
@@ -100,7 +103,7 @@ if not df_cut.empty:
             'Recomendação': cross_df['Recomendacao']
         })
 
-        # Aplica estilo CSS para ajustar a largura das colunas
+        # CSS para ajustar colunas
         st.markdown("""
             <style>
             .stTable td:first-child {
@@ -114,10 +117,69 @@ if not df_cut.empty:
             </style>
         """, unsafe_allow_html=True)
 
-        # Define a ordem das colunas explicitamente
+        # Ordena colunas
         tabela_cruzamentos = tabela_cruzamentos[['Nº', 'Data', 'Preço', 'Recomendação']]
 
+        # Mostra tabela
         st.table(tabela_cruzamentos)
+
+        # >>> NOVO DATAFRAME FINAL <<<
+        df_cruzamentos = tabela_cruzamentos.copy()
+
+        
+
+
+
+        if "df_cruzamentos" in st.session_state:
+
+            df_cruzamentos = st.session_state["df_cruzamentos"].copy()
+
+            # Garantir ordem cronológica
+            df_cruzamentos = df_cruzamentos.sort_values(by="Data")
+
+            # Extrair preços em formato numérico
+            df_cruzamentos["Preco_num"] = (
+                df_cruzamentos["Preço"]
+                .str.replace("R$", "", regex=False)
+                .str.replace(",", ".", regex=False)
+                .astype(float)
+            )
+
+            # Variáveis iniciais
+            valor = 10000.0
+            quantidade = 0.0
+            comprado = False
+
+            # Loop pelas linhas do DataFrame
+            for idx, row in df_cruzamentos.iterrows():
+
+                preco = row["Preco_num"]
+                recomendacao = row["Recomendação"]
+
+                # Primeira compra ou compra após venda
+                if recomendacao == "COMPRA" and not comprado:
+                    quantidade = valor / preco
+                    comprado = True
+
+                # Venda
+                elif recomendacao == "VENDA" and comprado:
+                    valor = quantidade * preco
+                    quantidade = 0
+                    comprado = False
+
+            # Se terminar comprado, valor permanece o mesmo (a pedido do usuário)
+            preco_ultimo = df_cruzamentos["Preco_num"].iloc[-1]
+
+            st.write("### Resultado Final")
+            st.write(f"**Valor final:** R$ {valor:,.2f}")
+            st.write(f"**Quantidade final:** {quantidade}")
+            st.write(f"**Preço da última linha:** R$ {preco_ultimo:.2f}")
+
+        else:
+            st.warning("df_cruzamentos ainda não foi gerado.")
+
+
+
 
         # Análise de concretização das recomendações
         st.subheader("Data da Concretização")
@@ -270,6 +332,9 @@ if not df_cut.empty:
             st.info("Não foram encontradas concretizações de recomendações no período analisado.")
     else:
         st.info("Não foram encontrados pontos de cruzamento no período selecionado.")
+
+
+
 
 # Footer
 st.markdown("---")

@@ -2,7 +2,7 @@ import streamlit as st
 import os
 import yfinance as yf
 import pandas as pd
-from datetime import datetime
+from datetime import datetime, timedelta
 
 def baixa_cotacoes(ticker):
     # Simulação de funcionalidade para baixar cotações
@@ -38,13 +38,16 @@ def atualizar_diferencial(ticker, caminho_arquivo):
 
     # data de início para buscar: dia seguinte ao último
     start = (last_date + timedelta(days=1)).strftime('%Y-%m-%d')
-    end = datetime.today().strftime('%Y-%m-%d')
+    end = (datetime.today() + timedelta(days=1)).strftime('%Y-%m-%d')
 
     if start > end:
         print(f"{ticker}: já atualizado até {last_date.date()}")
         return
 
-    df_novo = yf.download(ticker, start=start, end=end).reset_index()
+    try:
+        df_novo = yf.download(ticker, start=start, end=end, multi_level_index=False).reset_index()
+    except TypeError:
+        df_novo = yf.download(ticker, start=start, end=end).reset_index()
     if df_novo.empty:
         print(f"{ticker}: sem novos dados entre {start} e {end}")
         return
@@ -91,11 +94,14 @@ def baixar_cotacoes(ticker: str) -> pd.DataFrame:
     """
     # Definir a data inicial e final
     data_inicio = "2009-01-01"
-    data_fim = datetime.today().strftime('%Y-%m-%d')
+    data_fim = (datetime.today() + timedelta(days=1)).strftime('%Y-%m-%d')
 
     # Baixar os dados
     #df = yf.download(ticker, start=data_inicio, end=data_fim)
-    df = yf.download(ticker, start=data_inicio, end=data_fim).reset_index()
+    try:
+        df = yf.download(ticker, start=data_inicio, end=data_fim, multi_level_index=False).reset_index()
+    except TypeError:
+        df = yf.download(ticker, start=data_inicio, end=data_fim).reset_index()
 
 
     # Verificar se os dados foram baixados com sucesso
@@ -256,13 +262,24 @@ def main():
                                 continue
 
                             # Encontrar última data
-                            ultima_data = pd.to_datetime(df_existente["Date"]).max()
-                            proxima_data = (ultima_data + pd.Timedelta(days=1)).strftime("%Y-%m-%d")
-
-                            st.write(f"  Última data encontrada: {ultima_data.date()}")
+                            if df_existente.empty:
+                                proxima_data = "2009-01-01"
+                                st.write("  Arquivo vazio. Baixando histórico completo desde 2009.")
+                            else:
+                                ultima_data = pd.to_datetime(df_existente["Date"]).max()
+                                if pd.isna(ultima_data):
+                                    proxima_data = "2009-01-01"
+                                    st.write("  Data inválida ou inexistente. Baixando histórico completo desde 2009.")
+                                else:
+                                    proxima_data = (ultima_data + pd.Timedelta(days=1)).strftime("%Y-%m-%d")
+                                    st.write(f"  Última data encontrada: {ultima_data.date()}")
 
                             # Baixar somente dados novos
-                            df_novo = yf.download(ticker, start=proxima_data).reset_index()
+                            ticker_formatado = formatar_ticker(ticker)
+                            try:
+                                df_novo = yf.download(ticker_formatado, start=proxima_data, multi_level_index=False).reset_index()
+                            except TypeError:
+                                df_novo = yf.download(ticker_formatado, start=proxima_data).reset_index()
 
                             if df_novo.empty:
                                 st.info(f"  Nenhuma nova cotação encontrada para {ticker}.")
