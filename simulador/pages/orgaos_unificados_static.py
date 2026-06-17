@@ -92,7 +92,9 @@ def load_orgaos(_conn: None = None) -> Optional[pd.DataFrame]:
     """
     try:
         # Lê o arquivo CSV
-        df = pd.read_csv('dados/query1.csv')
+        import os
+        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        df = pd.read_csv(os.path.join(base_dir, 'dados/query1.csv'))
         
         # Converte as colunas para o formato correto
         df.columns = df.columns.str.lower()
@@ -140,11 +142,13 @@ def lookup_siorg(_conn: None, uos: List[str]) -> Optional[pd.DataFrame]:
     """
     try:
         # Lista de arquivos para concatenar
+        import os
+        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         csv_files = [
-            'dados/query2_1.csv',
-            'dados/query2_2.csv',
-            'dados/query2_3.csv',
-            'dados/query2_4.csv'
+            os.path.join(base_dir, 'dados/query2_1.csv'),
+            os.path.join(base_dir, 'dados/query2_2.csv'),
+            os.path.join(base_dir, 'dados/query2_3.csv'),
+            os.path.join(base_dir, 'dados/query2_4.csv')
         ]
         
         # Lê e concatena todos os arquivos

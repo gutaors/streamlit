@@ -63,7 +63,8 @@ def calcular_resultado_operacao(valor_inicial: float, qtde_papeis: float, preco_
     }
 
 # codigo para processar
-df_tickers = pd.read_csv("dados/tickers.csv", sep=";")
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+df_tickers = pd.read_csv(os.path.join(BASE_DIR, "dados/tickers.csv"), sep=";")
 tickers = df_tickers["ticker"].tolist()
 
 # Crie uma lista vazia para armazenar os DataFrames de cotações
@@ -82,11 +83,11 @@ with st.expander("Simulador"):
     st.title("Simulador")
 
     def pegar_dados_acoes():
-        path = "dados/acoes.csv"
+        path = os.path.join(BASE_DIR, "dados/acoes.csv")
         return pd.read_csv(path, delimiter=";")
 
     def pegar_minhas_acoes():
-        path = "dados/tickers.csv"
+        path = os.path.join(BASE_DIR, "dados/tickers.csv")
         return pd.read_csv(path, delimiter=";")
 
     df = pegar_dados_acoes()
