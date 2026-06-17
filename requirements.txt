@@ -3,6 +3,5 @@ pandas
 yfinance
 matplotlib
 streamlit-option-menu
-pandas-datareader
 plotly
 requests

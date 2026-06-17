@@ -7,7 +7,7 @@ import streamlit as st
 from streamlit_option_menu import option_menu
 import yfinance as yf
 import pandas as pd
-import pandas_datareader.data as web
+
 import plotly.graph_objs as go
 import matplotlib.pyplot as plt
 
