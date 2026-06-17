@@ -380,7 +380,7 @@ with st.expander("Painel Resumido"):
     # st.write(df_valores_filtrado.head(10))
 
     # ENCONTRAR DATA EXATA DE CINCO ANOS ATRÁS
-
+    data_atual = datetime.today()
     # Subtraia cinco anos
     data_cinco_anos_atras = pd.to_datetime(data_atual) - timedelta(days=5 * 365)
     # Métricas entre data_atual e data_cinco_anos_atras
