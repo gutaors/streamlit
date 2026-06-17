@@ -27,7 +27,8 @@ def verificar_arquivo_existente(ticker):
 def atualizar_diferencial(ticker, caminho_arquivo):
     # lê se existir
     if os.path.exists(caminho_arquivo):
-        df_exist = pd.read_csv(caminho_arquivo, parse_dates=['Date'])  # ajuste se sua coluna tiver outro nome
+        df_exist = pd.read_csv(caminho_arquivo)
+        df_exist['Date'] = pd.to_datetime(df_exist['Date'], format="%Y-%m-%d %H:%M:%S")
         if df_exist.empty:
             last_date = datetime.strptime("2009-01-01", "%Y-%m-%d")
         else:
@@ -59,6 +60,8 @@ def atualizar_diferencial(ticker, caminho_arquivo):
     else:
         df_comb = df_novo
 
+    # normalizar datas antes de salvar
+    df_comb['Date'] = pd.to_datetime(df_comb['Date']).dt.strftime("%Y-%m-%d %H:%M:%S")
     # salvar (substitui)
     df_comb.to_csv(caminho_arquivo, index=False)
     print(f"{ticker}: atualizado até {df_comb['Date'].max().date()}")
@@ -266,7 +269,7 @@ def main():
                                 proxima_data = "2009-01-01"
                                 st.write("  Arquivo vazio. Baixando histórico completo desde 2009.")
                             else:
-                                ultima_data = pd.to_datetime(df_existente["Date"]).max()
+                                ultima_data = pd.to_datetime(df_existente["Date"], format="%Y-%m-%d %H:%M:%S").max()
                                 if pd.isna(ultima_data):
                                     proxima_data = "2009-01-01"
                                     st.write("  Data inválida ou inexistente. Baixando histórico completo desde 2009.")
@@ -287,6 +290,9 @@ def main():
 
                             # Concatenar
                             df_atualizado = pd.concat([df_existente, df_novo], ignore_index=True)
+
+                            # Normalizar datas para formato consistente
+                            df_atualizado["Date"] = pd.to_datetime(df_atualizado["Date"]).dt.strftime("%Y-%m-%d %H:%M:%S")
 
                             # Remover possíveis duplicatas
                             df_atualizado.drop_duplicates(subset=["Date"], keep="last", inplace=True)
