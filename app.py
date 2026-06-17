@@ -23,24 +23,20 @@ def formatar_data(data: date) -> str:
     """Formata uma data para o padrão brasileiro."""
     return data.strftime("%d/%m/%Y")
 
-def obter_dados_acao(data: date, df_valores: pd.DataFrame) -> pd.DataFrame:
-    """
-    Obtém dados de uma ação para uma data específica, retrocedendo até encontrar dados válidos.
-    
-    Args:
-        data: Data desejada
-        df_valores: DataFrame com histórico de valores
-        
-    Returns:
-        DataFrame com os dados da ação para a data mais próxima
-    """
-    data_atual = datetime.now()
-    while True:
-        filtro_data = df_valores["Date"] == pd.to_datetime(data_atual)
+def obter_dados_acao(data_alvo, df_valores: pd.DataFrame) -> pd.DataFrame:
+    if df_valores.empty or "Date" not in df_valores.columns:
+        return pd.DataFrame()
+    data_alvo_dt = pd.to_datetime(data_alvo).date()
+    limite = 30
+    tentativa = 0
+    while tentativa < limite:
+        filtro_data = df_valores["Date"].dt.date == data_alvo_dt
         dados = df_valores[filtro_data]
         if not dados.empty:
             return dados
-        data_atual -= timedelta(days=1)
+        data_alvo_dt -= timedelta(days=1)
+        tentativa += 1
+    return pd.DataFrame()
 
 def calcular_resultado_operacao(valor_inicial: float, qtde_papeis: float, preco_venda: float) -> dict:
     """
