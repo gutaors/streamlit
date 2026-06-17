@@ -5,3 +5,8 @@ matplotlib
 streamlit-option-menu
 plotly
 requests
+beautifulsoup4
+numpy
+prophet
+torch
+transformers
