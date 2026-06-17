@@ -23,7 +23,7 @@ def carregar_dados(ticker: str) -> pd.DataFrame:
     df = pd.read_csv(caminho)
     if "Date" not in df.columns or "Close" not in df.columns:
         return pd.DataFrame()
-    df["Date"] = pd.to_datetime(df["Date"], format="%Y-%m-%d %H:%M:%S")
+    df["Date"] = pd.to_datetime(df["Date"], format="mixed")
     df = df.sort_values("Date").reset_index(drop=True)
     return df
 
