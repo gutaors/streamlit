@@ -45,10 +45,10 @@ def atualizar_diferencial(ticker, caminho_arquivo):
         print(f"{ticker}: já atualizado até {last_date.date()}")
         return
 
-    try:
-        df_novo = yf.download(ticker, start=start, end=end, multi_level_index=False).reset_index()
-    except TypeError:
-        df_novo = yf.download(ticker, start=start, end=end).reset_index()
+    df_novo = yf.download(ticker, start=start, end=end)
+    if isinstance(df_novo.columns, pd.MultiIndex):
+        df_novo.columns = df_novo.columns.get_level_values(0)
+    df_novo = df_novo.reset_index()
     if df_novo.empty:
         print(f"{ticker}: sem novos dados entre {start} e {end}")
         return
@@ -101,10 +101,10 @@ def baixar_cotacoes(ticker: str) -> pd.DataFrame:
 
     # Baixar os dados
     #df = yf.download(ticker, start=data_inicio, end=data_fim)
-    try:
-        df = yf.download(ticker, start=data_inicio, end=data_fim, multi_level_index=False).reset_index()
-    except TypeError:
-        df = yf.download(ticker, start=data_inicio, end=data_fim).reset_index()
+    df = yf.download(ticker, start=data_inicio, end=data_fim)
+    if isinstance(df.columns, pd.MultiIndex):
+        df.columns = df.columns.get_level_values(0)
+    df = df.reset_index()
 
 
     # Verificar se os dados foram baixados com sucesso
@@ -279,10 +279,10 @@ def main():
 
                             # Baixar somente dados novos
                             ticker_formatado = formatar_ticker(ticker)
-                            try:
-                                df_novo = yf.download(ticker_formatado, start=proxima_data, multi_level_index=False).reset_index()
-                            except TypeError:
-                                df_novo = yf.download(ticker_formatado, start=proxima_data).reset_index()
+                            df_novo = yf.download(ticker_formatado, start=proxima_data)
+                            if isinstance(df_novo.columns, pd.MultiIndex):
+                                df_novo.columns = df_novo.columns.get_level_values(0)
+                            df_novo = df_novo.reset_index()
 
                             if df_novo.empty:
                                 st.info(f"  Nenhuma nova cotação encontrada para {ticker}.")

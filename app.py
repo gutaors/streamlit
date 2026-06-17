@@ -135,7 +135,9 @@ with st.expander("Simulador"):
     # Função para pegar valores online
     def pegar_valores_online(sigla_acao):
         # Faz o download dos dados da ação
-        df = yf.download(sigla_acao, DATA_INICIO, DATA_FIM, multi_level_index=False)
+        df = yf.download(sigla_acao, DATA_INICIO, DATA_FIM)
+        if isinstance(df.columns, pd.MultiIndex):
+            df.columns = df.columns.get_level_values(0)
         # Reseta o índice do DataFrame para organizar os dados
         df.reset_index(inplace=True)
         return df
