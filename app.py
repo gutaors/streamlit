@@ -161,10 +161,6 @@ if not dados_compra.empty:
     st.write(
         f"Quantidade de papéis comprados com {formatar_moeda(valor_sim)}: {float(quantidade_comprada):.2f}"
     )
-else:
-    st.write(
-        f"**Não há dados para a data de compra especificada:** {formatar_data(data_compra_sim)}"
-    )
     #############+=============================================================================================
     # Simular a Venda
     # Filtrar o DataFrame com base na data de venda
@@ -203,170 +199,174 @@ else:
         ############## FORMATADO
     else:
         f"**Não há dados para a data de venda especificada:** {formatar_data(data_venda_sim)}"
-
-    st.write(df_valores.tail(3))
-
-    # ================================================================================================================================================
-
-    # Filtra as linhas correspondentes às datas de compra e venda
-    row_compra = df_valores[df_valores["Date"].dt.date == data_compra_sim]
-    row_venda = df_valores[df_valores["Date"].dt.date == data_venda_sim]
-
-    ##############
-    st.subheader("Tabela de valores - " + nome_acao_escolhida)
-    st.write(df_valores.tail(10))
-    st.write(df_valores.tail(10))
-
-    # Criar gráfico de médias móveis
-
-    # Calcular médias móveis de 15 e 50 períodos
-    df_valores["MA15"] = df_valores["Close"].rolling(window=15).mean()
-    df_valores["MA50"] = df_valores["Close"].rolling(window=50).mean()
-
-    # Criar coluna para identificar cruzamentos
-    df_valores["Cruzamento"] = df_valores["MA15"] - df_valores["MA50"]
-
-    # Plotar gráfico com preços, médias móveis e setas para cruzamentos
-    st.subheader("Gráfico de Médias Móveis com Cruzamentos")
-    fig_ma_cruzamentos = go.Figure()
-
-    fig_ma_cruzamentos.add_trace(
-        go.Scatter(
-            x=df_valores["Date"],
-            y=df_valores["Close"],
-            name="Preço de Fechamento",
-            line_color="blue",
-        )
-    )
-    fig_ma_cruzamentos.add_trace(
-        go.Scatter(
-            x=df_valores["Date"],
-            y=df_valores["MA15"],
-            name="Média Móvel de 15 períodos",
-            line_color="orange",
-        )
-    )
-    fig_ma_cruzamentos.add_trace(
-        go.Scatter(
-            x=df_valores["Date"],
-            y=df_valores["MA50"],
-            name="Média Móvel de 50 períodos",
-            line_color="green",
-        )
+else:
+    st.write(
+        f"**Não há dados para a data de compra especificada:** {formatar_data(data_compra_sim)}"
     )
 
-    # Adicionar setas para cruzamentos
-    for index, row in df_valores.iterrows():
-        if (
-            index > 0
-            and df_valores.at[index, "Cruzamento"]
-            * df_valores.at[index - 1, "Cruzamento"]
-            < 0
-        ):
-            arrow_color = "green" if df_valores.at[index, "Cruzamento"] > 0 else "red"
-            fig_ma_cruzamentos.add_annotation(
-                x=row["Date"],
-                y=row["Close"],
-                ax=row["Date"],
-                ay=row["Close"],
-                showarrow=True,
-                arrowhead=1,
-                arrowsize=2,
-                arrowwidth=2,
-                arrowcolor=arrow_color,
-            )
+st.write(df_valores.tail(3))
 
-    fig_ma_cruzamentos.update_layout(
-        title="Gráfico de Preços e Médias Móveis com Cruzamentos"
+# ================================================================================================================================================
+
+# Filtra as linhas correspondentes às datas de compra e venda
+row_compra = df_valores[df_valores["Date"].dt.date == data_compra_sim]
+row_venda = df_valores[df_valores["Date"].dt.date == data_venda_sim]
+
+##############
+st.subheader("Tabela de valores - " + nome_acao_escolhida)
+st.write(df_valores.tail(10))
+st.write(df_valores.tail(10))
+
+# Criar gráfico de médias móveis
+
+# Calcular médias móveis de 15 e 50 períodos
+df_valores["MA15"] = df_valores["Close"].rolling(window=15).mean()
+df_valores["MA50"] = df_valores["Close"].rolling(window=50).mean()
+
+# Criar coluna para identificar cruzamentos
+df_valores["Cruzamento"] = df_valores["MA15"] - df_valores["MA50"]
+
+# Plotar gráfico com preços, médias móveis e setas para cruzamentos
+st.subheader("Gráfico de Médias Móveis com Cruzamentos")
+fig_ma_cruzamentos = go.Figure()
+
+fig_ma_cruzamentos.add_trace(
+    go.Scatter(
+        x=df_valores["Date"],
+        y=df_valores["Close"],
+        name="Preço de Fechamento",
+        line_color="blue",
     )
-    st.plotly_chart(fig_ma_cruzamentos)
-
-    # Criar gráfico de preços
-
-    st.subheader("Gráfico de preços:")
-    fig = go.Figure()
-    fig.add_trace(
-        go.Scatter(
-            x=df_valores["Date"],
-            y=df_valores["Close"],
-            name="Preco Fechamento",
-            line_color="yellow",
-        )
+)
+fig_ma_cruzamentos.add_trace(
+    go.Scatter(
+        x=df_valores["Date"],
+        y=df_valores["MA15"],
+        name="Média Móvel de 15 períodos",
+        line_color="orange",
     )
-    fig.add_trace(
-        go.Scatter(
-            x=df_valores["Date"],
-            y=df_valores["Open"],
-            name="Preco Abertura",
-            line_color="blue",
-        )
+)
+fig_ma_cruzamentos.add_trace(
+    go.Scatter(
+        x=df_valores["Date"],
+        y=df_valores["MA50"],
+        name="Média Móvel de 50 períodos",
+        line_color="green",
     )
-    st.plotly_chart(fig)
+)
 
-    # previsao
-
-    df_treino = df_valores[["Date", "Close"]]
-
-    # renomear colunas
-    df_treino = df_treino.rename(columns={"Date": "ds", "Close": "y"})
-
-
-
-    ticker_selecionado = df_acao.iloc[0]["sigla_acao"]
-    if ticker_selecionado in df_minhas_acoes["ticker"].values:
-        valor_pago = df_minhas_acoes[df_minhas_acoes["ticker"] == ticker_selecionado][
-            "paguei"
-        ].values[0]
-        valor_maximo = df_valores["Close"].max()
-        diferenca_valor_maximo = valor_maximo - float(valor_pago.replace(",", "."))
-        valor_pago = float(valor_pago.replace(",", "."))
-        st.subheader("Análise da Ação: " + nome_acao_escolhida)
-        st.write("Ticker selecionado: " + ticker_selecionado)
-        st.write("Valor Pago: R$ {:.2f}".format(valor_pago))
-        st.write("Valor Máximo: R$ {:.2f}".format(valor_maximo))
-        st.write(
-            "Diferença entre Valor Máximo e Valor Pago: R$ {:.2f}".format(
-                diferenca_valor_maximo
-            )
+# Adicionar setas para cruzamentos
+for index, row in df_valores.iterrows():
+    if (
+        index > 0
+        and df_valores.at[index, "Cruzamento"]
+        * df_valores.at[index - 1, "Cruzamento"]
+        < 0
+    ):
+        arrow_color = "green" if df_valores.at[index, "Cruzamento"] > 0 else "red"
+        fig_ma_cruzamentos.add_annotation(
+            x=row["Date"],
+            y=row["Close"],
+            ax=row["Date"],
+            ay=row["Close"],
+            showarrow=True,
+            arrowhead=1,
+            arrowsize=2,
+            arrowwidth=2,
+            arrowcolor=arrow_color,
         )
 
-    st.subheader("Valores em df_acao['sigla_acao']")
-    st.write(df_acao["sigla_acao"])
+fig_ma_cruzamentos.update_layout(
+    title="Gráfico de Preços e Médias Móveis com Cruzamentos"
+)
+st.plotly_chart(fig_ma_cruzamentos)
 
-    st.subheader("Valores em df_minhas_acoes['ticker']")
-    st.write(df_minhas_acoes["ticker"])
+# Criar gráfico de preços
 
-    # Filtra os dados entre as datas da coluna 'data' em df_minhas_acoes e a data atual
+st.subheader("Gráfico de preços:")
+fig = go.Figure()
+fig.add_trace(
+    go.Scatter(
+        x=df_valores["Date"],
+        y=df_valores["Close"],
+        name="Preco Fechamento",
+        line_color="yellow",
+    )
+)
+fig.add_trace(
+    go.Scatter(
+        x=df_valores["Date"],
+        y=df_valores["Open"],
+        name="Preco Abertura",
+        line_color="blue",
+    )
+)
+st.plotly_chart(fig)
 
-    data_inicio = datetime.now() - timedelta(
-        days=30 * 12
-    )  # Subtrai 12 meses (aproximadamente 30 dias por mês)
+# previsao
 
-    data_atual = datetime.today().strftime("%Y%m%d")
-    data_fim = data_atual
-    mask = (df_valores["Date"] >= data_inicio) & (df_valores["Date"] <= data_fim)
-    df_valores_filtrado = df_valores.loc[mask]
+df_treino = df_valores[["Date", "Close"]]
 
-    # Agrupa por mês/ano e calcula a média de 'Close' - MODIFIED HERE FROM "Adj Close" TO "Close"
-    df_valores_filtrado["YearMonth"] = df_valores_filtrado["Date"].dt.to_period("M")
-    media_por_mes = df_valores_filtrado.groupby("YearMonth")["Close"].mean()
+# renomear colunas
+df_treino = df_treino.rename(columns={"Date": "ds", "Close": "y"})
 
-    # Seleciona os três meses com maiores médias
-    tres_meses_mais_altos = media_por_mes.nlargest(3)
 
-    st.subheader("Três meses com maiores médias de Close:") # MODIFIED HERE FROM "Adj Close" TO "Close"
-    st.subheader("no último ano")
 
-    for year_month, media in tres_meses_mais_altos.items():
-        st.write(f"Mês/Ano: {year_month}, Média: {media:.2f}")
+ticker_selecionado = df_acao.iloc[0]["sigla_acao"]
+if ticker_selecionado in df_minhas_acoes["ticker"].values:
+    valor_pago = df_minhas_acoes[df_minhas_acoes["ticker"] == ticker_selecionado][
+        "paguei"
+    ].values[0]
+    valor_maximo = df_valores["Close"].max()
+    diferenca_valor_maximo = valor_maximo - float(valor_pago.replace(",", "."))
+    valor_pago = float(valor_pago.replace(",", "."))
+    st.subheader("Análise da Ação: " + nome_acao_escolhida)
+    st.write("Ticker selecionado: " + ticker_selecionado)
+    st.write("Valor Pago: R$ {:.2f}".format(valor_pago))
+    st.write("Valor Máximo: R$ {:.2f}".format(valor_maximo))
+    st.write(
+        "Diferença entre Valor Máximo e Valor Pago: R$ {:.2f}".format(
+            diferenca_valor_maximo
+        )
+    )
 
-    # Seleciona os três meses com menores médias
-    tres_meses_menos_altos = media_por_mes.nsmallest(3)
+st.subheader("Valores em df_acao['sigla_acao']")
+st.write(df_acao["sigla_acao"])
 
-    st.subheader("Três meses com menores médias de Close:") # MODIFIED HERE FROM "Adj Close" TO "Close"
-    st.subheader("no último ano")
-    for year_month, media in tres_meses_menos_altos.items():
-        st.write(f"Mês/Ano: {year_month}, Média: {media:.2f}")
+st.subheader("Valores em df_minhas_acoes['ticker']")
+st.write(df_minhas_acoes["ticker"])
+
+# Filtra os dados entre as datas da coluna 'data' em df_minhas_acoes e a data atual
+
+data_inicio = datetime.now() - timedelta(
+    days=30 * 12
+)  # Subtrai 12 meses (aproximadamente 30 dias por mês)
+
+data_atual = datetime.today().strftime("%Y%m%d")
+data_fim = data_atual
+mask = (df_valores["Date"] >= data_inicio) & (df_valores["Date"] <= data_fim)
+df_valores_filtrado = df_valores.loc[mask]
+
+# Agrupa por mês/ano e calcula a média de 'Close' - MODIFIED HERE FROM "Adj Close" TO "Close"
+df_valores_filtrado["YearMonth"] = df_valores_filtrado["Date"].dt.to_period("M")
+media_por_mes = df_valores_filtrado.groupby("YearMonth")["Close"].mean()
+
+# Seleciona os três meses com maiores médias
+tres_meses_mais_altos = media_por_mes.nlargest(3)
+
+st.subheader("Três meses com maiores médias de Close:") # MODIFIED HERE FROM "Adj Close" TO "Close"
+st.subheader("no último ano")
+
+for year_month, media in tres_meses_mais_altos.items():
+    st.write(f"Mês/Ano: {year_month}, Média: {media:.2f}")
+
+# Seleciona os três meses com menores médias
+tres_meses_menos_altos = media_por_mes.nsmallest(3)
+
+st.subheader("Três meses com menores médias de Close:") # MODIFIED HERE FROM "Adj Close" TO "Close"
+st.subheader("no último ano")
+for year_month, media in tres_meses_menos_altos.items():
+    st.write(f"Mês/Ano: {year_month}, Média: {media:.2f}")
 
 
 with st.expander("Painel Resumido"):
