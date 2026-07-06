@@ -157,6 +157,239 @@ if app_mode == "Indicadores":
 
         st.markdown("### Resumo da Recomendação")
         st.markdown(rec, unsafe_allow_html=True)
+
+        # ─────────────────────────────────────────────────────────────────────
+        # TABELA CONSOLIDADA DE RECOMENDAÇÕES
+        # ─────────────────────────────────────────────────────────────────────
+        st.markdown("---")
+        st.markdown("## 📊 Tabela Consolidada de Recomendações")
+        st.caption(
+            "Recomendações calculadas com base nos dados históricos disponíveis até a data de corte selecionada. "
+            "Prophet e Precificação (Graham) são calculados apenas para o ticker selecionado acima."
+        )
+
+        import numpy as np
+
+        # ── helpers ──────────────────────────────────────────────────────────
+        def _cell(label: str) -> str:
+            """Retorna HTML de célula colorida por recomendação."""
+            if label == "COMPRA":
+                return "<td style='color:#22c55e;font-weight:700;text-align:center'>🟢 COMPRA</td>"
+            elif label == "VENDA":
+                return "<td style='color:#ef4444;font-weight:700;text-align:center'>🔴 VENDA</td>"
+            elif label == "NEUTRO":
+                return "<td style='color:#f59e0b;font-weight:700;text-align:center'>🟡 NEUTRO</td>"
+            else:
+                return "<td style='color:#6b7280;text-align:center'>—</td>"
+
+        def _rec_indicadores(df_ticker: pd.DataFrame) -> str:
+            """Recomendação: MM200 + RSI + MACD."""
+            if len(df_ticker) < 2:
+                return "—"
+            try:
+                df_ticker = df_ticker.copy()
+                df_ticker['_mm200'] = df_ticker['Close'].rolling(200).mean()
+                delta = df_ticker['Close'].diff()
+                gain = delta.clip(lower=0).rolling(14).mean()
+                loss = (-delta.clip(upper=0)).rolling(14).mean()
+                rs = gain / loss.replace(0, np.nan)
+                df_ticker['_rsi'] = 100 - (100 / (1 + rs))
+                ema12 = df_ticker['Close'].ewm(span=12, adjust=False).mean()
+                ema26 = df_ticker['Close'].ewm(span=26, adjust=False).mean()
+                df_ticker['_macd'] = ema12 - ema26
+                df_ticker['_signal'] = df_ticker['_macd'].ewm(span=9, adjust=False).mean()
+                df_ticker.dropna(subset=['_mm200', '_rsi', '_macd', '_signal'], inplace=True)
+                if df_ticker.empty:
+                    return "—"
+                c = df_ticker.iloc[-1]
+                if c['_rsi'] > 50 and c['_macd'] > c['_signal'] and c['Close'] > c['_mm200']:
+                    return "COMPRA"
+                elif c['_rsi'] < 50 and c['_macd'] < c['_signal'] and c['Close'] < c['_mm200']:
+                    return "VENDA"
+                else:
+                    return "NEUTRO"
+            except Exception:
+                return "—"
+
+        def _rec_sma_cross(df_ticker: pd.DataFrame) -> str:
+            """Recomendação: SMA50 × SMA200 (Golden/Death Cross)."""
+            if len(df_ticker) < 200:
+                return "—"
+            try:
+                sma50  = df_ticker['Close'].rolling(50).mean().iloc[-1]
+                sma200 = df_ticker['Close'].rolling(200).mean().iloc[-1]
+                if np.isnan(sma50) or np.isnan(sma200):
+                    return "—"
+                return "COMPRA" if sma50 > sma200 else "VENDA"
+            except Exception:
+                return "—"
+
+        def _rec_prophet(df_ticker: pd.DataFrame, meses: int = 6) -> str:
+            """Recomendação via Prophet (lento — só para o ticker selecionado)."""
+            try:
+                from prophet import Prophet
+                df_p = df_ticker[['Close']].copy()
+                df_p.reset_index(inplace=True)
+                df_p.rename(columns={'Date': 'ds', 'Close': 'y'}, inplace=True)
+                df_p['ds'] = pd.to_datetime(df_p['ds'])
+                modelo = Prophet(yearly_seasonality=True, weekly_seasonality=False, daily_seasonality=False)
+                modelo.fit(df_p)
+                futuro = modelo.make_future_dataframe(periods=meses * 30)
+                prev = modelo.predict(futuro)
+                yhat_final = prev.iloc[-1]['yhat']
+                ultimo_real = float(df_ticker['Close'].iloc[-1])
+                return "COMPRA" if yhat_final > ultimo_real else "VENDA"
+            except Exception:
+                return "—"
+
+        def _rec_graham(ticker_str: str) -> str:
+            """Recomendação via Fórmula de Graham usando yfinance."""
+            try:
+                import yfinance as yf
+                t = yf.Ticker(ticker_str)
+                info = t.info
+                lpa = info.get('trailingEps', None)
+                vpa = info.get('bookValue', None)
+                preco = info.get('currentPrice', info.get('previousClose', None))
+                if lpa and vpa and preco and lpa > 0 and vpa > 0:
+                    preco_justo = np.sqrt(22.5 * lpa * vpa)
+                    return "COMPRA" if preco_justo > preco else "VENDA"
+                return "—"
+            except Exception:
+                return "—"
+
+        # ── Calcular recomendações para todos os tickers ──────────────────────
+        with st.spinner("Calculando recomendações para todos os ativos..."):
+            # Prophet e Graham só para o ticker selecionado
+            prophet_rec_sel  = None
+            graham_rec_sel   = None
+
+            linhas_tabela = []
+            for tk in arquivos_csv:
+                caminho_tk = os.path.join(pasta_cotacoes, tk + '.csv')
+                try:
+                    df_tk = pd.read_csv(caminho_tk)
+                    if 'Date' in df_tk.columns:
+                        df_tk['Date'] = pd.to_datetime(df_tk['Date'], errors='coerce')
+                        df_tk.dropna(subset=['Date'], inplace=True)
+                        df_tk.set_index('Date', inplace=True)
+                        df_tk.sort_index(inplace=True)
+                    df_tk['Close'] = pd.to_numeric(df_tk.get('Close', pd.Series(dtype=float)), errors='coerce')
+                    df_tk.dropna(subset=['Close'], inplace=True)
+                    df_tk = df_tk[df_tk.index <= pd.to_datetime(cut_date)]
+
+                    rec_ind  = _rec_indicadores(df_tk)
+                    rec_sma  = _rec_sma_cross(df_tk)
+
+                    if tk == ticker_simbolo:
+                        with st.spinner(f"Calculando Prophet para {tk}..."):
+                            prophet_rec_sel = _rec_prophet(df_tk)
+                        with st.spinner(f"Buscando dados Graham para {tk}..."):
+                            graham_rec_sel = _rec_graham(tk)
+                        rec_prophet = prophet_rec_sel
+                        rec_graham  = graham_rec_sel
+                    else:
+                        rec_prophet = "N/D"
+                        rec_graham  = "N/D"
+
+                    linhas_tabela.append({
+                        'ticker':      tk,
+                        'indicadores': rec_ind,
+                        'sma_cross':   rec_sma,
+                        'prophet':     rec_prophet,
+                        'graham':      rec_graham,
+                    })
+                except Exception:
+                    linhas_tabela.append({
+                        'ticker':      tk,
+                        'indicadores': '—',
+                        'sma_cross':   '—',
+                        'prophet':     'N/D',
+                        'graham':      'N/D',
+                    })
+
+        # ── Renderizar a tabela HTML ──────────────────────────────────────────
+        st.markdown("""
+        <style>
+        .rec-table { width:100%; border-collapse:collapse; font-family:'Segoe UI',sans-serif; }
+        .rec-table thead th {
+            background:#1e293b; color:#94a3b8;
+            font-size:0.75rem; font-weight:700;
+            text-transform:uppercase; letter-spacing:0.06em;
+            padding:10px 14px; border-bottom:1px solid #334155;
+            text-align:center;
+        }
+        .rec-table thead th:first-child { text-align:left; }
+        .rec-table tbody tr { border-bottom:1px solid #1e293b; transition:background 0.15s; }
+        .rec-table tbody tr:hover { background:rgba(255,255,255,0.03); }
+        .rec-table tbody td { padding:9px 14px; font-size:0.88rem; color:#e2e8f0; }
+        .rec-table .pct-alta  { color:#22c55e; font-weight:700; text-align:center; }
+        .rec-table .pct-venda { color:#ef4444; font-weight:700; text-align:center; }
+        .rec-table .pct-neutro{ color:#f59e0b; font-weight:700; text-align:center; }
+        .rec-table .ticker-col{ color:#93c5fd; font-weight:700; }
+        .row-alta  { background:rgba(34,197,94,0.06)  !important; }
+        .row-venda { background:rgba(239,68,68,0.06)  !important; }
+        </style>
+        """, unsafe_allow_html=True)
+
+        cabecalho = """
+        <table class="rec-table">
+          <thead>
+            <tr>
+              <th>Ticker</th>
+              <th>Indicadores<br><small>MM200 · RSI · MACD</small></th>
+              <th>Médias Móveis<br><small>SMA50 × SMA200</small></th>
+              <th>Prophet<br><small>Previsão futura</small></th>
+              <th>Precificação<br><small>Graham</small></th>
+              <th>% Compra</th>
+            </tr>
+          </thead>
+          <tbody>
+        """
+
+        corpo = ""
+        for r in linhas_tabela:
+            # Contar recomendações (apenas as que têm valor definido: COMPRA ou VENDA)
+            todas = [r['indicadores'], r['sma_cross'], r['prophet'], r['graham']]
+            validas = [v for v in todas if v in ('COMPRA', 'VENDA', 'NEUTRO')]
+            n_compra = sum(1 for v in validas if v == 'COMPRA')
+            pct = (n_compra / len(validas) * 100) if validas else 0.0
+
+            if pct >= 75:
+                row_cls = "row-alta"
+                pct_cls = "pct-alta"
+                pct_icon = "🟢"
+            elif pct <= 25:
+                row_cls = "row-venda"
+                pct_cls = "pct-venda"
+                pct_icon = "🔴"
+            else:
+                row_cls = ""
+                pct_cls = "pct-neutro"
+                pct_icon = "🟡"
+
+            tk_nome = r['ticker'].replace('.SA', '')
+            sel_mark = " ★" if r['ticker'] == ticker_simbolo else ""
+
+            corpo += f"""
+            <tr class="{row_cls}">
+              <td class="ticker-col">{tk_nome}{sel_mark}</td>
+              {_cell(r['indicadores'])}
+              {_cell(r['sma_cross'])}
+              {_cell(r['prophet'])}
+              {_cell(r['graham'])}
+              <td class="{pct_cls}">{pct_icon} {pct:.0f}%</td>
+            </tr>
+            """
+
+        rodape = "</tbody></table>"
+        st.markdown(cabecalho + corpo + rodape, unsafe_allow_html=True)
+
+        st.caption(
+            "★ = ticker selecionado no filtro | "
+            "N/D = modelo não executado para este ticker | "
+            "— = dados insuficientes para calcular"
+        )
     else:
         st.write("Coluna 'Close' não encontrada ou sem dados.")
 
