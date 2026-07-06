@@ -204,6 +204,79 @@ st.markdown(
     f"<div style='display:flex;gap:12px;flex-wrap:wrap'>{cards_recs}</div>",
     unsafe_allow_html=True,
 )
+
+# ── Análise Consolidada ───────────────────────────────────────────────────────
+_todas_recs = [rec_prophet, rec_torch, rec_mm, rec_graham, rec_bazin]
+_validas     = [r for r in _todas_recs if r in ("COMPRAR", "VENDER", "MANTER")]
+_n_comprar   = _validas.count("COMPRAR")
+_n_vender    = _validas.count("VENDER")
+_n_manter    = _validas.count("MANTER")
+_total       = len(_validas)
+
+if _total > 0:
+    if _n_comprar > _n_vender and _n_comprar > _n_manter:
+        _veredicto, _vbg, _vborder, _vcor, _vicon = (
+            "COMPRAR",
+            "linear-gradient(135deg,#052e16 0%,#0d3d1e 100%)",
+            "#16a34a", "#4ade80", "📈"
+        )
+        _descricao = (
+            f"A maioria dos modelos ({_n_comprar} de {_total}) aponta tendência de alta. "
+            "O ativo apresenta mais oportunidade do que risco no momento."
+        )
+    elif _n_vender > _n_comprar and _n_vender > _n_manter:
+        _veredicto, _vbg, _vborder, _vcor, _vicon = (
+            "VENDER",
+            "linear-gradient(135deg,#2d0a0a 0%,#3d1010 100%)",
+            "#dc2626", "#f87171", "📉"
+        )
+        _descricao = (
+            f"A maioria dos modelos ({_n_vender} de {_total}) sinaliza tendência de baixa. "
+            "Considere reduzir ou proteger posições."
+        )
+    else:
+        _veredicto, _vbg, _vborder, _vcor, _vicon = (
+            "MANTER",
+            "linear-gradient(135deg,#1c1400 0%,#2a1f00 100%)",
+            "#d97706", "#fbbf24", "⚖️"
+        )
+        _descricao = (
+            f"Os modelos estão divididos ({_n_comprar} comprar · {_n_vender} vender · {_n_manter} manter). "
+            "Aguarde confirmação adicional antes de agir."
+        )
+
+    # Barra de pontuação
+    _pct_comprar = int(_n_comprar / _total * 100)
+    _pct_vender  = int(_n_vender  / _total * 100)
+    _pct_manter  = 100 - _pct_comprar - _pct_vender
+
+    _barra = (
+        f"<div style='display:flex;height:8px;border-radius:4px;overflow:hidden;margin:12px 0'>"
+        f"<div style='width:{_pct_comprar}%;background:#16a34a'></div>"
+        f"<div style='width:{_pct_manter}%;background:#d97706'></div>"
+        f"<div style='width:{_pct_vender}%;background:#dc2626'></div>"
+        f"</div>"
+        f"<div style='display:flex;gap:16px;font-size:0.72rem;color:#94a3b8'>"
+        f"<span>🟢 Comprar: {_n_comprar}</span>"
+        f"<span>🟡 Manter: {_n_manter}</span>"
+        f"<span>🔴 Vender: {_n_vender}</span>"
+        f"<span style='margin-left:auto'>Total: {_total} modelos</span>"
+        f"</div>"
+    )
+
+    _html_conclusao = (
+        f"<div style='background:{_vbg};border:1px solid {_vborder};border-radius:14px;"
+        f"padding:20px 24px;margin-top:16px'>"
+        f"<div style='font-size:0.72rem;color:#94a3b8;text-transform:uppercase;"
+        f"letter-spacing:0.1em;margin-bottom:8px'>📋 Conclusão Consolidada</div>"
+        f"<div style='font-size:1.6rem;font-weight:900;color:{_vcor};margin-bottom:8px'>"
+        f"{_vicon} {_veredicto}</div>"
+        f"<div style='font-size:0.9rem;color:#cbd5e1;line-height:1.55'>{_descricao}</div>"
+        f"{_barra}"
+        f"</div>"
+    )
+    st.markdown(_html_conclusao, unsafe_allow_html=True)
+
 st.markdown("---")
 
 if 'Close' in df_cut.columns:
