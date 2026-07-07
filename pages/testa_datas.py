@@ -295,23 +295,161 @@ rodape = "</tbody></table>"
 
 st.markdown(cabecalho + corpo + rodape, unsafe_allow_html=True)
 
-# ── Resumo estatístico ────────────────────────────────────────────────────────
+# ── Análise de acertos por algoritmo ─────────────────────────────────────────
 st.markdown("---")
-st.markdown("### 📊 Resumo")
+st.markdown("### 📊 Análise de Desempenho dos Algoritmos")
 
-total_linhas = len(df_result)
-dias_validos = df_result[df_result["Dias até +10%"].apply(lambda x: x not in ("N/A", "Ainda não", "—"))]
-acertos      = len(dias_validos)
-pct_acerto   = acertos / total_linhas * 100 if total_linhas else 0
+# Classificar cada linha por algoritmo
+# "Acerto" = a coluna Dias até +10% tem um número (ou seja, houve lucro ≥ 10%)
+def _lucrou(dias_str) -> bool:
+    try:
+        int(dias_str)
+        return True
+    except (ValueError, TypeError):
+        return False
 
-if not dias_validos.empty:
-    media_dias = dias_validos["Dias até +10%"].astype(int).mean()
-    mediana_dias = dias_validos["Dias até +10%"].astype(int).median()
+df_result["_lucrou"] = df_result["Dias até +10%"].apply(_lucrou)
+
+# Apenas linhas onde cada algoritmo recomendou COMPRAR
+stats = {}
+for algo, col in [("Prophet", "Rec. Prophet"), ("Séries", "Rec. Séries"), ("Torch", "Rec. Torch")]:
+    sub = df_result[df_result[col] == "COMPRAR"]
+    total_compras = len(sub)
+    acertos       = sub["_lucrou"].sum()
+    erros         = total_compras - acertos
+    pct           = (acertos / total_compras * 100) if total_compras > 0 else 0.0
+    stats[algo]   = {"total": total_compras, "acertos": acertos, "erros": erros, "pct": pct}
+
+# Ranking
+ranking = sorted(stats.items(), key=lambda x: x[1]["pct"], reverse=True)
+melhor_algo, melhor_stat = ranking[0]
+
+# ── Métricas rápidas ──────────────────────────────────────────────────────────
+col1, col2, col3 = st.columns(3)
+for col, (algo, s) in zip([col1, col2, col3], ranking):
+    medal = "🥇" if algo == melhor_algo else ("🥈" if ranking.index((algo, s)) == 1 else "🥉")
+    col.metric(
+        label=f"{medal} {algo}",
+        value=f"{s['pct']:.0f}% de acerto",
+        delta=f"{s['acertos']} acertos de {s['total']} compras",
+    )
+
+st.markdown("<br>", unsafe_allow_html=True)
+
+# ── Tabela detalhada por algoritmo ────────────────────────────────────────────
+def _cor_pct(pct: float) -> str:
+    if pct >= 60:   return "#4ade80"
+    elif pct >= 40: return "#fbbf24"
+    else:           return "#f87171"
+
+def _barra(pct: float, cor: str) -> str:
+    w = int(pct)
+    return (
+        f"<div style='background:#1e293b;border-radius:4px;height:10px;width:100%;overflow:hidden'>"
+        f"<div style='background:{cor};height:10px;width:{w}%;border-radius:4px'></div></div>"
+    )
+
+html_det = (
+    "<table style='width:100%;border-collapse:collapse;font-family:Segoe UI,sans-serif;font-size:0.86rem'>"
+    "<thead><tr>"
+    "<th style='background:#1e293b;color:#94a3b8;padding:10px 14px;text-align:left;"
+    "font-size:0.72rem;text-transform:uppercase;letter-spacing:0.07em;border-bottom:2px solid #334155'>Algoritmo</th>"
+    "<th style='background:#1e293b;color:#94a3b8;padding:10px 14px;text-align:center;"
+    "font-size:0.72rem;text-transform:uppercase;letter-spacing:0.07em;border-bottom:2px solid #334155'>Compras sinalizadas</th>"
+    "<th style='background:#1e293b;color:#94a3b8;padding:10px 14px;text-align:center;"
+    "font-size:0.72rem;text-transform:uppercase;letter-spacing:0.07em;border-bottom:2px solid #334155'>✅ Acertos</th>"
+    "<th style='background:#1e293b;color:#94a3b8;padding:10px 14px;text-align:center;"
+    "font-size:0.72rem;text-transform:uppercase;letter-spacing:0.07em;border-bottom:2px solid #334155'>❌ Erros</th>"
+    "<th style='background:#1e293b;color:#94a3b8;padding:10px 14px;text-align:center;"
+    "font-size:0.72rem;text-transform:uppercase;letter-spacing:0.07em;border-bottom:2px solid #334155'>% Acerto</th>"
+    "<th style='background:#1e293b;color:#94a3b8;padding:10px 14px;text-align:left;"
+    "font-size:0.72rem;text-transform:uppercase;letter-spacing:0.07em;border-bottom:2px solid #334155'>Barra</th>"
+    "</tr></thead><tbody>"
+)
+
+for i, (algo, s) in enumerate(ranking):
+    medal = ["🥇", "🥈", "🥉"][i]
+    cor   = _cor_pct(s["pct"])
+    html_det += (
+        f"<tr style='border-bottom:1px solid #1e293b'>"
+        f"<td style='padding:10px 14px;color:#e2e8f0;font-weight:700'>{medal} {algo}</td>"
+        f"<td style='padding:10px 14px;text-align:center;color:#94a3b8'>{s['total']}</td>"
+        f"<td style='padding:10px 14px;text-align:center;color:#4ade80;font-weight:700'>{s['acertos']}</td>"
+        f"<td style='padding:10px 14px;text-align:center;color:#f87171;font-weight:700'>{s['erros']}</td>"
+        f"<td style='padding:10px 14px;text-align:center;color:{cor};font-weight:800'>{s['pct']:.1f}%</td>"
+        f"<td style='padding:10px 14px;min-width:160px'>{_barra(s['pct'], cor)}</td>"
+        f"</tr>"
+    )
+
+html_det += "</tbody></table>"
+st.markdown(html_det, unsafe_allow_html=True)
+
+# ── Consenso: todos os três recomendam COMPRAR ────────────────────────────────
+st.markdown("<br>", unsafe_allow_html=True)
+st.markdown("#### 🤝 Consenso — quando os três algoritmos recomendam COMPRAR")
+
+df_consenso = df_result[
+    (df_result["Rec. Prophet"] == "COMPRAR") &
+    (df_result["Rec. Séries"]  == "COMPRAR") &
+    (df_result["Rec. Torch"]   == "COMPRAR")
+].copy()
+
+n_consenso  = len(df_consenso)
+n_acerto_c  = df_consenso["_lucrou"].sum()
+n_erro_c    = n_consenso - n_acerto_c
+pct_c       = (n_acerto_c / n_consenso * 100) if n_consenso > 0 else 0.0
+cor_c       = _cor_pct(pct_c)
+
+if n_consenso == 0:
+    st.info("Nenhuma linha com os três algoritmos recomendando COMPRAR ao mesmo tempo nesta amostra.")
 else:
-    media_dias = mediana_dias = 0
+    dias_consenso_validos = df_consenso[df_consenso["_lucrou"]]["Dias até +10%"].astype(int)
+    media_c   = dias_consenso_validos.mean()   if not dias_consenso_validos.empty else 0
+    mediana_c = dias_consenso_validos.median() if not dias_consenso_validos.empty else 0
 
-col1, col2, col3, col4 = st.columns(4)
-col1.metric("Total de previsões", total_linhas)
-col2.metric("Lucraram ≥ 10%", acertos, f"{pct_acerto:.0f}%")
-col3.metric("Média de dias", f"{media_dias:.0f}" if media_dias else "—")
-col4.metric("Mediana de dias", f"{mediana_dias:.0f}" if mediana_dias else "—")
+    cc1, cc2, cc3, cc4, cc5 = st.columns(5)
+    cc1.metric("Casos de consenso", n_consenso)
+    cc2.metric("✅ Lucraram ≥ 10%", n_acerto_c)
+    cc3.metric("❌ Não lucraram", n_erro_c)
+    cc4.metric("% Acerto consenso", f"{pct_c:.0f}%")
+    cc5.metric("Média dias (consenso)", f"{media_c:.0f}" if media_c else "—")
+
+    # Veredicto final
+    if pct_c >= 60:
+        v_bg, v_bord, v_cor, v_icon = "#052e16", "#16a34a", "#4ade80", "🏆"
+        v_msg = f"Quando os três algoritmos concordam em COMPRAR, o acerto é de <b>{pct_c:.0f}%</b> — sinal forte e confiável."
+    elif pct_c >= 40:
+        v_bg, v_bord, v_cor, v_icon = "#1c1400", "#d97706", "#fbbf24", "⚖️"
+        v_msg = f"Consenso de compra com <b>{pct_c:.0f}%</b> de acerto — razoável, mas use com outros critérios."
+    else:
+        v_bg, v_bord, v_cor, v_icon = "#2d0a0a", "#dc2626", "#f87171", "⚠️"
+        v_msg = f"Consenso de compra com apenas <b>{pct_c:.0f}%</b> de acerto nesta amostra — sinais conflitantes."
+
+    st.markdown(
+        f"<div style='background:{v_bg};border:1px solid {v_bord};border-radius:12px;"
+        f"padding:16px 20px;margin-top:12px'>"
+        f"<div style='font-size:1.1rem;font-weight:800;color:{v_cor};margin-bottom:6px'>{v_icon} Veredicto do Consenso</div>"
+        f"<div style='font-size:0.9rem;color:#cbd5e1;line-height:1.6'>{v_msg}</div>"
+        f"<div style='font-size:0.8rem;color:#94a3b8;margin-top:8px'>"
+        f"Média de {media_c:.0f} dias · Mediana de {mediana_c:.0f} dias para atingir +10% nos casos de acerto."
+        f"</div></div>",
+        unsafe_allow_html=True,
+    )
+
+# ── Melhor algoritmo ──────────────────────────────────────────────────────────
+st.markdown("<br>", unsafe_allow_html=True)
+cor_m = _cor_pct(melhor_stat["pct"])
+st.markdown(
+    f"<div style='background:#0f172a;border:1px solid #334155;border-radius:12px;"
+    f"padding:16px 20px'>"
+    f"<div style='font-size:0.72rem;color:#94a3b8;text-transform:uppercase;"
+    f"letter-spacing:0.1em;margin-bottom:6px'>🏅 Melhor algoritmo desta amostra</div>"
+    f"<div style='font-size:1.4rem;font-weight:900;color:{cor_m}'>"
+    f"🥇 {melhor_algo} — {melhor_stat['pct']:.0f}% de acerto</div>"
+    f"<div style='font-size:0.85rem;color:#94a3b8;margin-top:6px'>"
+    f"{melhor_stat['acertos']} acertos · {melhor_stat['erros']} erros · "
+    f"{melhor_stat['total']} sinais de compra nesta amostra de {len(df_result)} previsões.</div>"
+    f"</div>",
+    unsafe_allow_html=True,
+)
+
