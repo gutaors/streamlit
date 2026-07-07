@@ -202,7 +202,7 @@ if not resultados:
 
 df_result = pd.DataFrame(resultados)
 
-# CSS da tabela
+# CSS estrutural da tabela (cores via inline style nas células)
 st.markdown("""
 <style>
 .td-table { width:100%; border-collapse:collapse; font-family:'Segoe UI',sans-serif; font-size:0.84rem; }
@@ -220,37 +220,28 @@ st.markdown("""
 .td-table .date-group { background:#0f172a; color:#475569;
     font-size:0.72rem; font-weight:700; letter-spacing:0.1em;
     text-transform:uppercase; padding:6px 12px; }
-.tk { color:#93c5fd; font-weight:700; }
-.comprar { color:#4ade80; font-weight:700; }
-.vender  { color:#f87171; font-weight:700; }
-.manter  { color:#fbbf24; font-weight:700; }
-.neutro  { color:#6b7280; }
-.dias-ok { color:#4ade80; font-weight:700; }
-.dias-no { color:#f59e0b; }
-.dias-na { color:#6b7280; }
-.val     { font-variant-numeric: tabular-nums; }
 </style>
 """, unsafe_allow_html=True)
 
 
 def _rec_cell(val: str) -> str:
     if val == "COMPRAR":
-        return f"<td class='comprar'>📈 COMPRAR</td>"
+        return "<td style='color:#4ade80;font-weight:700;text-align:center'>📈 COMPRAR</td>"
     elif val == "VENDER":
-        return f"<td class='vender'>📉 VENDER</td>"
+        return "<td style='color:#f87171;font-weight:700;text-align:center'>📉 VENDER</td>"
     elif val == "MANTER":
-        return f"<td class='manter'>⚖️ MANTER</td>"
+        return "<td style='color:#fbbf24;font-weight:700;text-align:center'>⚖️ MANTER</td>"
     else:
-        return f"<td class='neutro'>—</td>"
+        return "<td style='color:#6b7280;text-align:center'>—</td>"
 
 
 def _dias_cell(val: str) -> str:
     if val == "N/A":
-        return "<td class='dias-na'>N/A</td>"
+        return "<td style='color:#6b7280;text-align:center'>N/A</td>"
     elif val == "Ainda não":
-        return "<td class='dias-no'>⏳ Ainda não</td>"
+        return "<td style='color:#f59e0b;text-align:center'>⏳ Ainda não</td>"
     else:
-        return f"<td class='dias-ok'>✅ {val} dias</td>"
+        return f"<td style='color:#4ade80;font-weight:700;text-align:center'>✅ {val} dias</td>"
 
 
 cabecalho = """
