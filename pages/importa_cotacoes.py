@@ -239,76 +239,94 @@ def main():
     # atualizar cotacoes
     if st.button("Atualizar Cotações"):
         directory = "cotacoes"
+        os.makedirs(directory, exist_ok=True)
 
+        tickers_to_update = set()
+
+        # 1. Tickers já existentes no diretório
         if os.path.exists(directory):
             files = sorted(os.listdir(directory))
+            for file in files:
+                if file.endswith('.csv'):
+                    tickers_to_update.add(os.path.splitext(file)[0].upper())
 
-            if files:
-                st.write("Atualizando cotações de forma incremental com base nos arquivos no diretório 'cotacoes':")
+        # 2. Tickers do arquivo dados/tickers.csv
+        caminho_tickers_csv = "dados/tickers.csv"
+        if os.path.exists(caminho_tickers_csv):
+            try:
+                df_tickers = pd.read_csv(caminho_tickers_csv, sep=';')
+                if 'ticker' in df_tickers.columns:
+                    for t in df_tickers['ticker'].dropna():
+                        # Usar formatar_ticker para garantir que termine com .sa, e então deixar maiúsculo
+                        t_formatado = formatar_ticker(str(t)).upper()
+                        tickers_to_update.add(t_formatado)
+            except Exception as e:
+                st.warning(f"Aviso ao ler {caminho_tickers_csv}: {e}")
 
-                for file in files:
-                    st.write(f"- Processando: {file}")
-                    file_path = os.path.join(directory, file)
+        if tickers_to_update:
+            st.write("Atualizando cotações de forma incremental:")
 
+            for ticker in sorted(tickers_to_update):
+                file_name = f"{ticker}.csv"
+                file_path = os.path.join(directory, file_name)
+                st.write(f"- Processando: {file_name}")
+
+                try:
+                    df_existente = pd.DataFrame()
+                    # Carregar CSV existente
                     if os.path.isfile(file_path):
+                        df_existente = pd.read_csv(file_path)
+                        # Verificar se existe coluna de data
+                        if "Date" not in df_existente.columns:
+                            st.error(f"  Arquivo '{file_name}' não contém coluna 'Date'. Baixando tudo.")
+                            df_existente = pd.DataFrame()
 
-                        # Extrair o ticker a partir do nome do arquivo
-                        ticker = os.path.splitext(file)[0]
+                    # Encontrar última data
+                    if df_existente.empty:
+                        proxima_data = "2009-01-01"
+                        st.write("  Arquivo inexistente ou vazio. Baixando histórico completo desde 2009.")
+                    else:
+                        ultima_data = pd.to_datetime(df_existente["Date"], format="ISO8601").max()
+                        if pd.isna(ultima_data):
+                            proxima_data = "2009-01-01"
+                            st.write("  Data inválida ou inexistente. Baixando histórico completo desde 2009.")
+                        else:
+                            proxima_data = (ultima_data + pd.Timedelta(days=1)).strftime("%Y-%m-%d")
+                            st.write(f"  Última data encontrada: {ultima_data.date()}")
 
-                        try:
-                            # Carregar CSV existente
-                            df_existente = pd.read_csv(file_path)
+                    # Baixar somente dados novos
+                    ticker_formatado = formatar_ticker(ticker)
+                    df_novo = yf.download(ticker_formatado, start=proxima_data)
+                    if isinstance(df_novo.columns, pd.MultiIndex):
+                        df_novo.columns = df_novo.columns.get_level_values(0)
+                    df_novo = df_novo.reset_index()
 
-                            # Verificar se existe coluna de data
-                            if "Date" not in df_existente.columns:
-                                st.error(f"Arquivo '{file}' não contém coluna 'Date'. Pulando.")
-                                continue
+                    if df_novo.empty:
+                        st.info(f"  Nenhuma nova cotação encontrada para {ticker}.")
+                        continue
 
-                            # Encontrar última data
-                            if df_existente.empty:
-                                proxima_data = "2009-01-01"
-                                st.write("  Arquivo vazio. Baixando histórico completo desde 2009.")
-                            else:
-                                ultima_data = pd.to_datetime(df_existente["Date"], format="ISO8601").max()
-                                if pd.isna(ultima_data):
-                                    proxima_data = "2009-01-01"
-                                    st.write("  Data inválida ou inexistente. Baixando histórico completo desde 2009.")
-                                else:
-                                    proxima_data = (ultima_data + pd.Timedelta(days=1)).strftime("%Y-%m-%d")
-                                    st.write(f"  Última data encontrada: {ultima_data.date()}")
+                    # Concatenar
+                    if not df_existente.empty:
+                        df_atualizado = pd.concat([df_existente, df_novo], ignore_index=True)
+                    else:
+                        df_atualizado = df_novo
 
-                            # Baixar somente dados novos
-                            ticker_formatado = formatar_ticker(ticker)
-                            df_novo = yf.download(ticker_formatado, start=proxima_data)
-                            if isinstance(df_novo.columns, pd.MultiIndex):
-                                df_novo.columns = df_novo.columns.get_level_values(0)
-                            df_novo = df_novo.reset_index()
+                    # Normalizar datas para formato consistente
+                    df_atualizado["Date"] = pd.to_datetime(df_atualizado["Date"], format="ISO8601").dt.strftime("%Y-%m-%d %H:%M:%S")
 
-                            if df_novo.empty:
-                                st.info(f"  Nenhuma nova cotação encontrada para {ticker}.")
-                                continue
+                    # Remover possíveis duplicatas
+                    df_atualizado.drop_duplicates(subset=["Date"], keep="last", inplace=True)
 
-                            # Concatenar
-                            df_atualizado = pd.concat([df_existente, df_novo], ignore_index=True)
+                    # Salvar novamente
+                    df_atualizado.to_csv(file_path, index=False)
 
-                            # Normalizar datas para formato consistente
-                            df_atualizado["Date"] = pd.to_datetime(df_atualizado["Date"], format="ISO8601").dt.strftime("%Y-%m-%d %H:%M:%S")
+                    st.success(f"  Dados atualizados: {len(df_novo)} novos registros adicionados.")
 
-                            # Remover possíveis duplicatas
-                            df_atualizado.drop_duplicates(subset=["Date"], keep="last", inplace=True)
+                except Exception as e:
+                    st.error(f"Erro ao atualizar '{file_name}': {e}")
 
-                            # Salvar novamente
-                            df_atualizado.to_csv(file_path, index=False)
-
-                            st.success(f"  Dados atualizados: {len(df_novo)} novos registros adicionados.")
-
-                        except Exception as e:
-                            st.error(f"Erro ao atualizar '{file}': {e}")
-
-            else:
-                st.info("O diretório 'cotacoes' está vazio.")
         else:
-            st.error("O diretório 'cotacoes' não existe.")
+            st.info("O diretório 'cotacoes' está vazio e não há tickers adicionais para atualizar.")
 
 
         # Botão para visualizar as últimas 3 linhas dos arquivos no diretório
