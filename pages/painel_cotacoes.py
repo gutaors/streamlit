@@ -3,9 +3,23 @@ import os
 import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
+import yfinance as yf
 from datetime import date, timedelta
 
 st.set_page_config(page_title="Painel de Cotações", layout="wide")
+
+@st.cache_data(ttl=900)
+def get_commodity_prices():
+    try:
+        brent = yf.Ticker("BZ=F").fast_info['lastPrice']
+    except Exception:
+        brent = None
+    try:
+        # Minério de Ferro 62% Fe CFR China
+        iron = yf.Ticker("TIO=F").fast_info['lastPrice']
+    except Exception:
+        iron = None
+    return brent, iron
 
 # ─── CSS ───────────────────────────────────────────────────────────────────────
 st.markdown("""
@@ -71,6 +85,16 @@ st.markdown("""
 # ─── Cabeçalho ─────────────────────────────────────────────────────────────────
 st.markdown("## 📊 Painel de Cotações")
 st.markdown("Visão consolidada de todos os ativos da carteira.")
+
+brent_price, iron_price = get_commodity_prices()
+col_c1, col_c2, _ = st.columns([1, 1, 2])
+if brent_price is not None:
+    col_c1.metric("🛢️ Petróleo Brent Futuros", f"US$ {brent_price:.2f}")
+if iron_price is not None:
+    col_c2.metric("⛏️ Minério de Ferro", f"US$ {iron_price:.2f}")
+
+st.markdown("---")
+
 
 # ─── Diretório de cotações ─────────────────────────────────────────────────────
 PASTA_COTACOES = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'cotacoes')
@@ -193,16 +217,15 @@ header = """
 rows = ""
 for r in resumos:
     ticker_nome = r['ticker'].replace('.SA', '')
-    rows += f"""
-    <tr>
-      <td><span class="ticker-badge">{ticker_nome}</span></td>
-      <td>{arrow_badge(r['var_pct'])}</td>
-      <td>{fmt_pct(r['var_pct'])}</td>
-      <td>{fmt_val(r['var_valor'])}</td>
-      <td>R$ {r['valor_atual']:.2f}</td>
-      <td>R$ {r['media']:.2f}</td>
-    </tr>
-    """
+    rows += f"""<tr>
+  <td><span class="ticker-badge">{ticker_nome}</span></td>
+  <td>{arrow_badge(r['var_pct'])}</td>
+  <td>{fmt_pct(r['var_pct'])}</td>
+  <td>{fmt_val(r['var_valor'])}</td>
+  <td>R$ {r['valor_atual']:.2f}</td>
+  <td>R$ {r['media']:.2f}</td>
+</tr>
+"""
 
 footer = "</tbody></table>"
 st.markdown(header + rows + footer, unsafe_allow_html=True)
